@@ -36,6 +36,8 @@ class Game():
         self.outPlayer = -1
         self.round = 0
         self.checkIns = 0
+        self.startGameAfterCheckIns = 0
+        self.currentGameStatus = "not active"
         self.__createInitialDeck()
 
         return
@@ -64,27 +66,6 @@ class Game():
             d.append(s.pop(0))
 
         return
-
-    def startGame(self, lstEmails, startAfterCheckIns):
-        """
-            create the new players and assign an id send players an email with their URL endpoint for check-in.
-            start game loop after 'startAfterCheckIns' players check in. [delete non-checked in players]
-        """
-        waitTime = 60 * 2  # 2 minutes
-
-        for p in lstEmails:
-            id = self.__addPlayer()
-            # self.__invitePlayer(p, "http://localhost:5000", id)
-
-        timeout = time.time() + waitTime
-        while True:
-            if self.checkIns >= startAfterCheckIns or time.time() > timeout:
-                break
-            time.sleep(10)  # allows async processing?
-
-        return "game started with {} players checking in".format(self.checkIns)
-
-
     def __addPlayer(self):
         # creates a player and adds to Game.players
         if not self.players:
@@ -92,7 +73,7 @@ class Game():
         else:
             newId = len(self.players) - 1    # should make this at least a random nbr out of 1000
 
-        self.players.append(Player("undefined", newId))  # players add their own name at check-in
+        self.players.append(Player("__default__", newId))  # players add their own name at check-in
 
         return newId
 
@@ -102,21 +83,71 @@ class Game():
         """
         return
 
-    def playerCheckIn(self, id, name):
+    def __startGame(self):
         """
-            execution implies this user is ready to play
-            increments Game.checkIns and assigns a name to Player
+            If we have the checkIns, start the game up with housekeeping handled first
         """
-        s = "undefined"
+        if self.checkIns >= self.startGameAfterCheckIns:
+            finalplayers = [player for player in self.players if player.name != "__default__"]
+            self.players = finalplayers
+            del finalplayers  # now your ids r screwed
 
-        if id != -1:
-            player = self.players[id]
-            player.name = name
-            self.checkIns += 1
 
-        s = "player: {}-{} has checked in.  Check ins so far: {}".format(player.id, player.name, self.checkIns)
 
-        return s
+    def createGame(self, lstEmails, checkIns):
+        """
+            create the new players listed players and assign their id.
+            send players an email with their URL endpoint for check-in.
+            game loop starts when the Game.checkIns == startAfterCheckIns.
+            (note: "un-deal" players that did not check in and then delete these players at Game Start)
+        """
+        d = {"message": "New Game Started.  Inviting {} players by email.  Waiting for {} players to check in".format(len(lstEmails), checkIns)}
+
+        if not checkIns or checkIns > len(lstEmails):
+            checkIns = len(lstEmails)
+
+        self.startGameAfterCheckIns = checkIns
+
+        for p in lstEmails:
+            playerId = self.__addPlayer()
+            # self.__invitePlayer(p, "http://localhost:5000", playerId)
+
+        return json.dumps(d)
+
+
+
+    def playerCheckIn(self, playerId, name):
+        """
+            player executes this indicating they're ready to play
+            increments Game.checkIns and assigns name player provides to Game.Player[playerId]
+        """
+
+        if playerId != -1:
+            player = self.players[playerId]
+            if player.name == "__default__":   # conditional will help prevent players from checking in multiple times
+                self.players[playerId].name = name
+                self.checkIns += 1
+
+        self.__startGame()  # will start game now given checkIns
+
+        return self.__playerGameStatus(playerId)
+
+
+    def __playerGameStatus(self, playerId):
+        """
+            sends a data bundle back to player with current game status and player's specifics
+        """
+        d = {"message": "an error has occurred"}
+
+        player = self.players[playerId]
+        if player:
+            d["round"] = self.round
+            d["discard"] = self.discard
+            d["hand"] = player.hand
+            d["score"] = player.score
+            d["message"] = self.currentGameStatus
+
+        return json.dumps(d)
 
 
     def dealToPlayers(self):

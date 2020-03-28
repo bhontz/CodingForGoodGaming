@@ -16,6 +16,7 @@ thisGame = Game()
     - entry of list of email addresses of the players to invite for this game (they receive an email with a URL)
     - setting to start the game after 'n' of the players have checked in.
     - ability to pause the game between rounds  
+    test POST: {"invite": ["bhontz@gmail.com", "brad.hontz@pinpointview.com"], "startGameAfter": 1}
 
     pauseGame: break point in the game after the current round completes
         Server returns: confirmation of game pause after round n [GET]
@@ -36,16 +37,15 @@ def addPlayer():
 def dealPlayers():
     return thisGame.dealToPlayers()
 
-@api.route("/startGame", methods=['POST'])
-def startGame():
+@api.route("/createGame", methods=['POST'])
+def createGame():
     status = "nothing happened"
 
     param = request.form["data"]
     if param:
         obj = json.loads(param)
         if obj['invite']:
-            thisGame.startGame(obj['invite'], obj['startGameAfter'])
-            status = "Invited: {} players and game will start after {} check in.".format(len(obj['invite']), obj['startGameAfter'])
+            status = thisGame.createGame(obj['invite'], obj['startGameAfter'])
 
     return status
 
