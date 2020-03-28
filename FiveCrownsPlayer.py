@@ -7,7 +7,7 @@ from FiveCrownsGame import *
 class Player():
     def __init__(self, name, uid):
         self.name = name
-        self.id = uid  # int value assigned by server
+        self.id = 0  # int id value assigned by server
         self.hand = [] # of Card
         self.score = []  # of Int
         return

@@ -25,17 +25,17 @@ thisGame = Game()
         Server returns: confirmation of game resumed    
 """
 
-@api.route('/deck', methods=['GET'])
-def getDeck():
-    return thisGame.getDeck()
-
-@api.route('/addPlayer', methods=['GET'])
-def addPlayer():
-    return thisGame.addPlayer("Blazed Thorny")
-
-@api.route('/dealToPlayers', methods=['GET'])
-def dealPlayers():
-    return thisGame.dealToPlayers()
+# @api.route('/deck', methods=['GET'])
+# def getDeck():
+#     return thisGame.getDeck()
+#
+# @api.route('/addPlayer', methods=['GET'])
+# def addPlayer():
+#     return thisGame.addPlayer("Blazed Thorny")
+#
+# @api.route('/dealToPlayers', methods=['GET'])
+# def dealPlayers():
+#     return thisGame.dealToPlayers()
 
 @api.route("/createGame", methods=['POST'])
 def createGame():
@@ -48,6 +48,11 @@ def createGame():
             status = thisGame.createGame(obj['invite'], obj['startGameAfter'])
 
     return status
+
+@api.route("/peakIds", methods=['GET'])
+def peakIds():
+    return thisGame.peakIds()
+
 
 """
     API methods for client PLAYER:
@@ -77,20 +82,82 @@ def playerCheckIn():
     id = request.args.get('id', default=-1, type=int)
     name = request.args.get('name', default="undefined", type=str)
 
-    s = "playerCheckIn() error"
+    s = "playerReady error"
 
     if id != -1:
         s = thisGame.playerCheckIn(id, name)
 
     return s
 
-@api.route('/showDiscard', methods=['GET'])
-def showDiscard():
-    return thisGame.showDiscard()
+@api.route('/playerStatus', methods=['GET'])
+def playerStatus():
+    id = request.args.get('id', default=-1, type=int)
 
-@api.route('/randomCard', methods=['GET'])
-def get_random_card():
-    return thisGame.randomCardFromDeck()
+    s = "playerStatus error"
+    if id != -1:
+        s = thisGame.playerGameStatus(id)
+
+    return s
+
+@api.route('/pickDeck', methods=['GET'])
+def pickDeck():
+    id = request.args.get('id', default=-1, type=int)
+
+    s = "pickDeck error"
+    if id != -1:
+        s = thisGame.pickFromDeck(id)
+
+    return s
+
+@api.route('/pickDiscard', methods=['GET'])
+def pickDiscard():
+    id = request.args.get('id', default=-1, type=int)
+
+    s = "pickDiscard error"
+    if id != -1:
+        s = thisGame.pickFromDiscard(id)
+
+    return s
+
+@api.route('/discard', methods=['GET'])
+def discard():
+    id = request.args.get('id', default=-1, type=int)
+    cardId = request.args.get('cardId', default=-1, type=int)
+
+    s = "discard error"
+    if id != -1 and cardId != -1:
+        s = thisGame.playerDiscard(id, cardId)
+
+    return s
+
+@api.route('/pass', methods=['GET'])
+def playerPass():
+    id = request.args.get('id', default=-1, type=int)
+
+    s = "pass error"
+    if id != -1:
+        s = thisGame.playerPass(id)
+
+    return s
+
+@api.route('/out', methods=['GET'])
+def playerOut():
+    id = request.args.get('id', default=-1, type=int)
+
+    s = "out error"
+    if id != -1:
+        s = thisGame.playerOut(id)
+
+    return s
+
+
+# @api.route('/showDiscard', methods=['GET'])
+# def showDiscard():
+#     return thisGame.showDiscard()
+#
+# @api.route('/randomCard', methods=['GET'])
+# def get_random_card():
+#     return thisGame.randomCardFromDeck()
 
 if __name__ == '__main__':
     api.run(debug=True, port=5000)

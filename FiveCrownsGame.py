@@ -28,12 +28,13 @@ class Encoder(JSONEncoder):
 
 class Game():
     def __init__(self):
-        self.players = [] # of Player
+        self.players = {} # of Player
+        self.playerOrder = [] # dealer ordering
         self.deck = []  # of Card
         self.discard = [] # of Card
         self.dealer = 0
         self.activePlayer = 0
-        self.outPlayer = -1
+        self.outPlayer = 0
         self.round = 0
         self.checkIns = 0
         self.startGameAfterCheckIns = 0
@@ -46,7 +47,9 @@ class Game():
         return
 
     def __createInitialDeck(self):
-        # create two standard card decks that include 2 jokers but exclude 2s and aces
+        """
+            create two standard card decks that include 2 jokers but exclude 2s and aces
+        """
         for i in range(0, 2):
             self.deck.append(Card(CardSuit.ONEEYE.value, 0))  # add the two jokers
             self.deck.append(Card(CardSuit.TWOEYE.value, 0))
@@ -56,6 +59,7 @@ class Game():
 
         # now shuffle deck and deal initial discard
         random.shuffle(self.deck)
+        self.discard.clear()
         self.__moveCardsFromTop(self.deck, self.discard, 1)
 
         return
@@ -66,18 +70,40 @@ class Game():
             d.append(s.pop(0))
 
         return
+
     def __addPlayer(self):
         # creates a player and adds to Game.players
         if not self.players:
-            newId = 0
+            newId = random.randint(99, 9999)
         else:
             newId = len(self.players) - 1    # should make this at least a random nbr out of 1000
 
-        self.players.append(Player("__default__", newId))  # players add their own name at check-in
+        while True:
+            newID = random.randint(99, 9999)
+            if newId not in self.playerOrder:
+                break
+
+        self.playerOrder.append(newId)
+        self.players[newId] = Player("__default__", newId)
 
         return newId
 
-    def __invitePlayer(self, email, url, id):
+    def __nextPlayer(self, playerId):
+        """
+            returns Player.id of next player in Game.playerOrder, and accommodates wrapping the array
+        """
+        nextPlayer = -1   # would be an error if this was returned
+
+        if playerId in self.playerOrder:
+            if playerId == self.playerOrder[-1]:
+                nextPlayer = self.playerOrder[0]
+            else:
+                index = self.playerOrder.index(playerId)
+                nextPlayer = self.playerOrder[index + 1]
+
+        return nextPlayer
+
+    def __invitePlayer(self, playerEmail, urlOfGame, playerId):
         """
             send an email to "email" containing the URL and checkin endpoint with their ID as a PUT argument
         """
@@ -85,14 +111,41 @@ class Game():
 
     def __startGame(self):
         """
-            If we have the checkIns, start the game up with housekeeping handled first
+            Called if we have sufficient checkIns.
+            Clean out the players that didn't check in and start the first round
         """
-        if self.checkIns >= self.startGameAfterCheckIns:
-            finalplayers = [player for player in self.players if player.name != "__default__"]
-            self.players = finalplayers
-            del finalplayers  # now your ids r screwed
+        d = dict(self.players)  # temp used for removing players that didn't check in
 
+        for playerId, player in d.items():
+            if player.name == "__default__":
+                del self.players[playerId]
+                self.playerOrder.remove(playerId)
 
+        del d
+
+        self.__startNextRound()
+
+        return
+
+    def __startNextRound(self):
+        """
+            starts a new round
+        """
+        if self.round == 0:
+            self.activePlayer = self.__nextPlayer(self.playerOrder[0])  # there must be at least one player to get this far ...
+        else:
+            self.dealer = self.__nextPlayer(self.dealer)
+            self.activePlayer = self.__nextPlayer(self.dealer)
+
+        self.round += 1   # do we to recognize the end of the game through this method??
+
+        # shuffle full deck, deal first discard, and deal to the players
+        self.__createInitialDeck()
+        for playerId, player in self.players.items():
+            player.hand.clear()
+            self.__moveCardsFromTop(self.deck, player.hand, 3 + self.round - 1)
+
+        return
 
     def createGame(self, lstEmails, checkIns):
         """
@@ -110,67 +163,115 @@ class Game():
 
         for p in lstEmails:
             playerId = self.__addPlayer()
+            print(playerId)
             # self.__invitePlayer(p, "http://localhost:5000", playerId)
 
         return json.dumps(d)
-
-
 
     def playerCheckIn(self, playerId, name):
         """
             player executes this indicating they're ready to play
             increments Game.checkIns and assigns name player provides to Game.Player[playerId]
         """
-
-        if playerId != -1:
+        if playerId in self.players.keys():
             player = self.players[playerId]
             if player.name == "__default__":   # conditional will help prevent players from checking in multiple times
                 self.players[playerId].name = name
                 self.checkIns += 1
 
-        self.__startGame()  # will start game now given checkIns
+        if self.checkIns >= self.startGameAfterCheckIns:
+            self.__startGame()  # will start game now given checkIns
 
-        return self.__playerGameStatus(playerId)
+        return self.playerGameStatus(playerId)
 
-
-    def __playerGameStatus(self, playerId):
+    def playerGameStatus(self, playerId):
         """
             sends a data bundle back to player with current game status and player's specifics
         """
-        d = {"message": "an error has occurred"}
+        d = dict()
 
-        player = self.players[playerId]
-        if player:
-            d["round"] = self.round
-            d["discard"] = self.discard
-            d["hand"] = player.hand
-            d["score"] = player.score
-            d["message"] = self.currentGameStatus
+        d["round"] = self.round
+        d["discard"] = json.dumps(self.discard[-1], cls=Encoder)
+        d["checkIns"] = self.checkIns
+        d["startGameAfterCheckIns"] = self.startGameAfterCheckIns
+        d["activePlayer"] = self.players[self.activePlayer].name
+        d["nextPlayer"] = self.players[self.__nextPlayer(self.activePlayer)].name
+
+        if self.outPlayer:
+            d["outPlayer"] = self.players[self.outPlayer].name
+
+        if playerId in self.players.keys():
+            player = self.players[playerId]
+            if player:
+                d["hand"] = json.dumps(player.hand, cls=Encoder)
+                d["score"] = player.score
 
         return json.dumps(d)
 
+    def pickFromDeck(self, playerId):
+        """
+            player draws a card from the top of the deck
+        """
+        if playerId in self.players.keys():
+            player = self.players[playerId]
+            self.__moveCardsFromTop(self.deck, player.hand, 1)
 
-    def dealToPlayers(self):
-        # shuffles cards, deals[MOVES] the appropriate number given the round to the players
-        self.round = 1  # debug, this will[might] get separately
-        random.shuffle(self.deck)
-        for player in self.players:
-            player.hand.clear()
-            self.__moveCardsFromTop(self.deck, player.hand, 3 + self.round - 1)
+        return self.playerGameStatus(playerId)
 
-        return json.dumps(self.players[0].hand, cls=Encoder)   # this is just a debugger for now
+    def pickFromDiscard(self, playerId):
+        """
+            player draws a card from the end of the discard deck
+        """
+        if playerId in self.players.keys():
+            player = self.players[playerId]
+            player.hand.append(self.discard.pop(-1))  # discard is the last card in discard array
 
-    def getDeck(self):
-        return json.dumps(self.deck, cls=Encoder)
+        return self.playerGameStatus(playerId)
 
-    def randomCardFromDeck(self):
-        if self.deck:
-            card = random.choice(self.deck)
-            return json.dumps(card, cls=Encoder)
+    def playerDiscard(self, playerId, cardId):   # cardId is offset in Player.hand
+        if playerId in self.players.keys():
+            player = self.players[playerId]
+            if cardId < len(player.hand):
+                card = player.hand.pop(cardId)
+                self.discard.append(card)
 
-    def showDiscard(self):
-        if self.discard:
-            return json.dumps(self.discard[-1], cls=Encoder)
+        return self.playerGameStatus(playerId)
 
+    def playerPass(self, playerId):
+        if playerId in self.players.keys():
+            self.activePlayer = self.__nextPlayer(self.activePlayer)
+
+        return self.playerGameStatus(playerId)
+
+    def playerOut(self, playerId):
+        if playerId in self.players.keys():
+            # need some form of validation here !!!
+            self.outPlayer = playerId
+            self.activePlayer = self.__nextPlayer(self.activePlayer)
+
+        return self.playerGameStatus(playerId)
+
+
+
+    def peakIds(self):
+        """
+            peak at the playerIds - debugging method
+        """
+
+        return json.dumps(self.playerOrder)
+
+
+    # def getDeck(self):
+    #     return json.dumps(self.deck, cls=Encoder)
+    #
+    # def randomCardFromDeck(self):
+    #     if self.deck:
+    #         card = random.choice(self.deck)
+    #         return json.dumps(card, cls=Encoder)
+    #
+    # def showDiscard(self):
+    #     if self.discard:
+    #         return json.dumps(self.discard[-1], cls=Encoder)
+    #
 
 
