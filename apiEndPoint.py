@@ -122,11 +122,11 @@ def pickDiscard():
 @api.route('/discard', methods=['GET'])
 def discard():
     id = request.args.get('id', default=-1, type=int)
-    cardId = request.args.get('cardId', default=-1, type=int)
+    cardJSON = request.args.get('card', default="{}", type=str)
 
     s = "discard error"
-    if id != -1 and cardId != -1:
-        s = thisGame.playerDiscard(id, cardId)
+    if id != -1 and cardJSON != "{}":
+        s = thisGame.playerDiscard(id, cardJSON)
 
     return s
 

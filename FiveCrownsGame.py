@@ -12,14 +12,23 @@ class CardSuit(Enum):
     ONEEYE = 5
     TWOEYE = 6
 
+class CardColor(Enum):
+    BLACK = 1
+    RED = 2
+
 class Card():
-    def __init__(self, suit, value):
+    def __init__(self, color, suit, value):
+        self.color = color
         self.suit = suit
         self.value = value
         return
 
     def __del__(self):
         del self
+        return
+
+    def printCard(self):
+        print("color:{} suit:{} value:{}".format(self.color, self.suit, self.value))
         return
 
 class Encoder(JSONEncoder):
@@ -51,11 +60,12 @@ class Game():
             create two standard card decks that include 2 jokers but exclude 2s and aces
         """
         for i in range(0, 2):
-            self.deck.append(Card(CardSuit.ONEEYE.value, 0))  # add the two jokers
-            self.deck.append(Card(CardSuit.TWOEYE.value, 0))
+            self.deck.append(Card(CardColor.BLACK, CardSuit.ONEEYE.value, 0))  # add the two black jokers
+            self.deck.append(Card(CardColor.BLACK, CardSuit.TWOEYE.value, 0))
             for value in range(3, 14):
-                for suit in range(1, 5):
-                    self.deck.append(Card(suit, value))
+                for suit in range(1, 5):  # len CardSuit + 1
+                    for color in range(1, 3): # len Color + 1
+                        self.deck.append(Card(color, suit, value))
 
         # now shuffle deck and deal initial discard
         random.shuffle(self.deck)
@@ -73,13 +83,10 @@ class Game():
 
     def __addPlayer(self):
         # creates a player and adds to Game.players
-        if not self.players:
-            newId = random.randint(99, 9999)
-        else:
-            newId = len(self.players) - 1    # should make this at least a random nbr out of 1000
+        newId = random.randint(99, 9999)
 
         while True:
-            newID = random.randint(99, 9999)
+            newId = random.randint(99, 9999)
             if newId not in self.playerOrder:
                 break
 
@@ -136,6 +143,7 @@ class Game():
         else:
             self.dealer = self.__nextPlayer(self.dealer)
             self.activePlayer = self.__nextPlayer(self.dealer)
+            self.players[self.activePlayer].isActive = True
 
         self.round += 1   # do we to recognize the end of the game through this method??
 
@@ -163,7 +171,6 @@ class Game():
 
         for p in lstEmails:
             playerId = self.__addPlayer()
-            print(playerId)
             # self.__invitePlayer(p, "http://localhost:5000", playerId)
 
         return json.dumps(d)
@@ -194,8 +201,10 @@ class Game():
         d["discard"] = json.dumps(self.discard[-1], cls=Encoder)
         d["checkIns"] = self.checkIns
         d["startGameAfterCheckIns"] = self.startGameAfterCheckIns
-        d["activePlayer"] = self.players[self.activePlayer].name
-        d["nextPlayer"] = self.players[self.__nextPlayer(self.activePlayer)].name
+
+        if self.activePlayer:
+            d["activePlayer"] = self.players[self.activePlayer].name
+            d["nextPlayer"] = self.players[self.__nextPlayer(self.activePlayer)].name
 
         if self.outPlayer:
             d["outPlayer"] = self.players[self.outPlayer].name
@@ -212,9 +221,10 @@ class Game():
         """
             player draws a card from the top of the deck
         """
-        if playerId in self.players.keys():
+        if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
-            self.__moveCardsFromTop(self.deck, player.hand, 1)
+            if len(player.hand) == (3 + self.round - 1):
+                self.__moveCardsFromTop(self.deck, player.hand, 1)
 
         return self.playerGameStatus(playerId)
 
@@ -222,36 +232,60 @@ class Game():
         """
             player draws a card from the end of the discard deck
         """
-        if playerId in self.players.keys():
+        if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
-            player.hand.append(self.discard.pop(-1))  # discard is the last card in discard array
+            if len(player.hand) == (3 + self.round - 1):
+                player.hand.append(self.discard.pop(-1))  # discard is the last card in discard array
 
         return self.playerGameStatus(playerId)
 
-    def playerDiscard(self, playerId, cardId):   # cardId is offset in Player.hand
-        if playerId in self.players.keys():
+    def playerDiscard(self, playerId, cardJSON):
+        if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
-            if cardId < len(player.hand):
-                card = player.hand.pop(cardId)
-                self.discard.append(card)
+            d = eval(json.loads(cardJSON))
+            print(type(d))
+            discard = Card(d["color"], d["suit"], d["value"])
+            print("player discard:")
+            discard.printCard()
+            print("player hand length:{}".format(len(player.hand)))
+            i = 1
+            for p in player.hand:
+                print("card nbr:{}".format(i))
+                print(p.printCard())
+                i += 1
+
+            if discard in player.hand:
+                print("discard WAS in player hand")
+                # card = player.hand.pop(cardId)
+                player.hand.remove(discard)  # doesn't matter if there are multiple cards in hand
+                self.discard.append(discard)
+                player.isActive = False
+            else:
+                print("discard WAS NOT in player hand")
 
         return self.playerGameStatus(playerId)
 
     def playerPass(self, playerId):
-        if playerId in self.players.keys():
-            self.activePlayer = self.__nextPlayer(self.activePlayer)
+        if playerId in self.players.keys() and playerId == self.activePlayer:
+            player = self.players[playerId]
+            print(player.isActive)
+            if len(player.hand) == (3 + self.round - 1) and not player.isActive:
+                self.activePlayer = self.__nextPlayer(self.activePlayer)
 
         return self.playerGameStatus(playerId)
 
-    def playerOut(self, playerId):
-        if playerId in self.players.keys():
+    def playerOut(self, playerId, outCards):
+        if playerId in self.players.keys() and playerId == self.activePlayer:
             # need some form of validation here !!!
-            self.outPlayer = playerId
-            self.activePlayer = self.__nextPlayer(self.activePlayer)
+            # thinking of a structure like this:
+            # {"out":, "runs": [{cards ...}, {cards ...}], "books": [{cards ...}, {cards ...}]}
+            player = self.players[playerId]
+            if len(player.hand) == (3 + self.round - 1) and not player.isActive:
+                self.activePlayer = self.__nextPlayer(self.activePlayer)
+                self.outPlayer = playerId
+                # set player's score for this round to 0
 
         return self.playerGameStatus(playerId)
-
-
 
     def peakIds(self):
         """
