@@ -27,6 +27,15 @@ class Card():
         del self
         return
 
+    def __eq__(self, other):  # support equivalence testing
+        if isinstance(other, Card):
+            boolc = (self.color == other.color)
+            bools = (self.suit == other.suit)
+            boolv = (self.value == other.value)
+            if (boolc and bools and boolv):
+                return True
+        return False
+
     def printCard(self):
         print("color:{} suit:{} value:{}".format(self.color, self.suit, self.value))
         return
@@ -243,20 +252,9 @@ class Game():
         if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
             d = eval(json.loads(cardJSON))
-            print(type(d))
             discard = Card(d["color"], d["suit"], d["value"])
-            print("player discard:")
-            discard.printCard()
-            print("player hand length:{}".format(len(player.hand)))
-            i = 1
-            for p in player.hand:
-                print("card nbr:{}".format(i))
-                print(p.printCard())
-                i += 1
 
             if discard in player.hand:
-                print("discard WAS in player hand")
-                # card = player.hand.pop(cardId)
                 player.hand.remove(discard)  # doesn't matter if there are multiple cards in hand
                 self.discard.append(discard)
                 player.isActive = False

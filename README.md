@@ -13,8 +13,10 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-03-25
-
+Summary of functionality through 2020-03-29
+    
+    + api tested up to out validation / scoring
+    
     + initial commit with skeletal barebones ability to serve via localhost
 
 
