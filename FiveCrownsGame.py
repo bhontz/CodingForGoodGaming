@@ -9,16 +9,11 @@ class CardSuit(Enum):
     DIAMOND = 2
     HEART = 3
     SPADE = 4
-    ONEEYE = 5
-    TWOEYE = 6
-
-class CardColor(Enum):
-    BLACK = 1
-    RED = 2
+    REDJOKER = 5
+    BLACKJOKER = 6
 
 class Card():
-    def __init__(self, color, suit, value):
-        self.color = color
+    def __init__(self, suit, value):
         self.suit = suit
         self.value = value
         return
@@ -29,15 +24,14 @@ class Card():
 
     def __eq__(self, other):  # support equivalence testing
         if isinstance(other, Card):
-            boolc = (self.color == other.color)
             bools = (self.suit == other.suit)
             boolv = (self.value == other.value)
-            if (boolc and bools and boolv):
+            if (bools and boolv):
                 return True
         return False
 
     def printCard(self):
-        print("color:{} suit:{} value:{}".format(self.color, self.suit, self.value))
+        print("suit:{} value:{}".format(self.suit, self.value))
         return
 
 class Encoder(JSONEncoder):
@@ -69,12 +63,11 @@ class Game():
             create two standard card decks that include 2 jokers but exclude 2s and aces
         """
         for i in range(0, 2):
-            self.deck.append(Card(CardColor.BLACK, CardSuit.ONEEYE.value, 0))  # add the two black jokers
-            self.deck.append(Card(CardColor.BLACK, CardSuit.TWOEYE.value, 0))
+            self.deck.append(Card(CardSuit.ONEEYE.value, 0))  # add the two black jokers
+            self.deck.append(Card(CardSuit.TWOEYE.value, 0))
             for value in range(3, 14):
                 for suit in range(1, 5):  # len CardSuit + 1
-                    for color in range(1, 3): # len Color + 1
-                        self.deck.append(Card(color, suit, value))
+                    self.deck.append(Card(suit, value))
 
         # now shuffle deck and deal initial discard
         random.shuffle(self.deck)
@@ -92,10 +85,10 @@ class Game():
 
     def __addPlayer(self):
         # creates a player and adds to Game.players
-        newId = random.randint(99, 9999)
+        newId = random.randint(999, 9999)
 
         while True:
-            newId = random.randint(99, 9999)
+            newId = random.randint(999, 9999)
             if newId not in self.playerOrder:
                 break
 
@@ -252,14 +245,12 @@ class Game():
         if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
             d = eval(json.loads(cardJSON))
-            discard = Card(d["color"], d["suit"], d["value"])
+            playerDiscard = Card(d["suit"], d["value"])
 
-            if discard in player.hand:
-                player.hand.remove(discard)  # doesn't matter if there are multiple cards in hand
-                self.discard.append(discard)
+            if playerDiscard in player.hand:
+                player.hand.remove(playerDiscard)  # doesn't matter if there are multiple playerDiscard cards in hand
+                self.discard.append(playerDiscard)
                 player.isActive = False
-            else:
-                print("discard WAS NOT in player hand")
 
         return self.playerGameStatus(playerId)
 
@@ -279,8 +270,16 @@ class Game():
             # {"out":, "runs": [{cards ...}, {cards ...}], "books": [{cards ...}, {cards ...}]}
             player = self.players[playerId]
             if len(player.hand) == (3 + self.round - 1) and not player.isActive:
-                self.activePlayer = self.__nextPlayer(self.activePlayer)
                 self.outPlayer = playerId
+                """
+                    need to do something here to determine when the next player
+                    is once again the outPlayer, as that would end the round.
+                    Additionally, once round > 11 we end the game.  Should
+                    email round scores to everyone after game.  Need to write
+                    clear rules for the client in terms of "out" e.g. once outPlayer 
+                    is set, then "pass" is no longer enabled on the client, only "out"
+                """
+                self.activePlayer = self.__nextPlayer(self.activePlayer)
                 # set player's score for this round to 0
 
         return self.playerGameStatus(playerId)

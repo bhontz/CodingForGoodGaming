@@ -13,8 +13,10 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-03-29
+Summary of functionality through 2020-04-01
     
+    + using pyqt5 to build UI; reorderable player hand completed
+
     + api tested up to out validation / scoring
     
     + initial commit with skeletal barebones ability to serve via localhost
