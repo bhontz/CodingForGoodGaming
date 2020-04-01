@@ -25,7 +25,7 @@ class GlobalObject(QtCore.QObject):
         for func in functions:
             QtCore.QTimer.singleShot(0, func)
 
-class DraggableLabel(QLabel):
+class CardIcon(QLabel):
 
     def __init__(self, item, parent):
         super().__init__(item, parent)
@@ -99,7 +99,7 @@ class App(QDialog):
         self.height = 100
         GlobalObject().addEventListener("dropCard", self.cardMoved)
         self.cardArray = [{"suit":1,"value":1},{"suit":1,"value":2},{"suit":1,"value":3},{"suit":1,"value":4},{"suit":1,"value":5},{"suit":1,"value":6}]
-        self.CardIcons = []
+        self.cardIcons = []
         self.__initHand()
         self.initUI()
 
@@ -118,7 +118,7 @@ class App(QDialog):
     def __initHand(self):
         for i in range(0, len(self.cardArray)):
             s = json.dumps(self.cardArray[i])
-            self.CardIcons.append(DraggableLabel(s, self))
+            self.cardIcons.append(CardIcon(s, self))
         return
 
     def __reorderHand(self):
@@ -128,7 +128,7 @@ class App(QDialog):
         # print("before: {}".format(self.cardArray))
         # print("-------------------")
 
-        for i, card in enumerate(self.CardIcons):
+        for i, card in enumerate(self.cardIcons):
             card = card.exposeCard()
             if card != self.cardArray[i]:
                 break
@@ -139,7 +139,7 @@ class App(QDialog):
         card = self.cardArray.pop(sourceIdx)
         self.cardArray.insert(destIdx, card)
 
-        for i, card in enumerate(self.CardIcons):   # update all cards and local deck
+        for i, card in enumerate(self.cardIcons):   # update all cards and local deck
             card.updateImage(json.dumps(self.cardArray[i]))
         # print("after: {}".format(self.cardArray))
 
@@ -158,7 +158,7 @@ class App(QDialog):
         ii = 0
         for i in range(0, 2):  # 2 rows of 3 columns
             for j in range(0, 3):
-                layout.addWidget(self.CardIcons[ii], i, j)
+                layout.addWidget(self.cardIcons[ii], i, j)
                 ii += 1
 
         self.horizontalGroupBox.setLayout(layout)
