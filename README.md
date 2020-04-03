@@ -13,7 +13,9 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-04-01
+Summary of functionality through 2020-04-02
+    
+    + components of player UI, less how to 'mark' runs and books, complete
     
     + using pyqt5 to build UI; reorderable player hand completed
 

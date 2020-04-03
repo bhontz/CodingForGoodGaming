@@ -1,9 +1,13 @@
-from PyQt5.QtWidgets import (QLabel, QWidget, QPushButton, QDialog, QVBoxLayout, QGridLayout, QGroupBox, QApplication)
-from PyQt5.QtGui import QPixmap, QDrag, QPainter, QImage
+from PyQt5.QtWidgets import (QLabel, QWidget, QPushButton, QDialog, QVBoxLayout, QGridLayout, QGroupBox, QApplication, QLineEdit, QHBoxLayout)
+from PyQt5.QtGui import QPixmap, QDrag, QPainter
 from PyQt5.QtCore import QMimeData, Qt
 from PyQt5 import QtCore
-import os, sys, time, functools, json
+import os, sys, time, functools, json, requests
+from urllib.parse import quote
 from FiveCrownsGame import Card
+
+# class GameStatus():
+
 
 @functools.lru_cache()
 class GlobalObject(QtCore.QObject):
@@ -24,6 +28,48 @@ class GlobalObject(QtCore.QObject):
         functions = self._events.get(name, [])
         for func in functions:
             QtCore.QTimer.singleShot(0, func)
+
+
+class PlayerCheckIn(QDialog):
+
+    def __init__(self):
+        super().__init__()
+        self.playerURL = QLineEdit(self)
+        self.playerName = QLineEdit(self)
+        self.initUI()
+
+    def initUI(self):
+        promptLabel = QLabel(self)
+        promptLabel.setText("Paste the URL from the EMAIL INVITATION:")
+        nameLabel = QLabel(self)
+        nameLabel.setText("Enter your name:")
+        self.btnSubmit = QPushButton("Submit")
+        self.btnSubmit.clicked.connect(self.__playerCheckIn)
+
+        hbox = QHBoxLayout()
+        hbox.addStretch(1)
+        hbox.addWidget(self.btnSubmit)
+
+        vbox = QVBoxLayout()
+        vbox.addWidget(promptLabel,1)
+        vbox.addWidget(self.playerURL)
+        vbox.addWidget(nameLabel, 1)
+        vbox.addWidget(self.playerName)
+        vbox.addLayout(hbox)
+
+        self.setLayout(vbox)
+
+        self.setGeometry(300, 300, 500, 150)
+        self.setWindowTitle('Player Check In')
+        self.show()
+
+    def __playerCheckIn(self):
+        strCheckIn = "{}&name={}".format(self.playerURL.text().strip(), quote(self.playerName.text()))
+        print("player just checked In as:{}".format(strCheckIn))
+        # response = requests.get(strCheckIn)
+        # print(response.content)
+
+        self.close()
 
 class CardIcon(QLabel):
 
@@ -95,24 +141,53 @@ class App(QDialog):
         self.title = 'Fivecrowns Player UI'
         self.left = 10
         self.top = 10
-        self.width = 320
-        self.height = 100
+        self.width = 744
+        self.height = 562
         GlobalObject().addEventListener("dropCard", self.cardMoved)
         self.cardArray = [{"suit":1,"value":1},{"suit":1,"value":2},{"suit":1,"value":3},{"suit":1,"value":4},{"suit":1,"value":5},{"suit":1,"value":6}]
         self.cardIcons = []
         self.__initHand()
+        dlg = PlayerCheckIn()  # present at outset
+        if dlg.exec_():   # you need to keep this here as the dialog WAITS ON THIS
+            print("success")
+        else:
+            print("cancel!")  # if we need to figure out if the dialog closed, here's how
         self.initUI()
+
 
     def initUI(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
+        self.vrtMain = QVBoxLayout() # self.verticalLayoutWidget)
+        self.vrtMain.setContentsMargins(0, 0, 0, 0)
+        self.vrtMain.setObjectName("vrtMain")
+
+        self.hzMsgDiscard = QHBoxLayout()
+        self.hzMsgDiscard.setObjectName("hzMsgDiscard")
+
+        self.grpMessage = QGroupBox()
+        self.grpMessage.setObjectName("grpMessage")
+        self.grpMessage.setTitle("Message:")
+        self.hzMsgDiscard.addWidget(self.grpMessage, 80)
+
+        self.vrtSubmitDiscard = QVBoxLayout()
+        self.vrtSubmitDiscard.setObjectName("vrtSubmitDiscard")
+        self.btnRefresh = QPushButton()
+        self.btnRefresh.setObjectName("btnRefresh")
+        self.btnRefresh.setText("Refresh")
+        self.vrtSubmitDiscard.addWidget(self.btnRefresh)
+        self.grpDiscard = QGroupBox()
+        self.grpDiscard.setObjectName("grpDiscard")
+        self.grpDiscard.setTitle("Discard:")
+        self.vrtSubmitDiscard.addWidget(self.grpDiscard)
+        self.hzMsgDiscard.addLayout(self.vrtSubmitDiscard, 20)
+        self.vrtMain.addLayout(self.hzMsgDiscard, 40)
+
         self.createGridLayout()
+        self.vrtMain.addWidget(self.horizontalGroupBox)
 
-        windowLayout = QVBoxLayout()
-        windowLayout.addWidget(self.horizontalGroupBox)
-        self.setLayout(windowLayout)
-
+        self.setLayout(self.vrtMain)
         self.show()
 
     def __initHand(self):
@@ -152,7 +227,7 @@ class App(QDialog):
         return
 
     def createGridLayout(self):
-        self.horizontalGroupBox = QGroupBox("Player Hand")
+        self.horizontalGroupBox = QGroupBox("Player Hand:")
         layout = QGridLayout()
 
         ii = 0

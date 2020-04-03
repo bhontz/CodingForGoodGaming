@@ -63,8 +63,8 @@ class Game():
             create two standard card decks that include 2 jokers but exclude 2s and aces
         """
         for i in range(0, 2):
-            self.deck.append(Card(CardSuit.ONEEYE.value, 0))  # add the two black jokers
-            self.deck.append(Card(CardSuit.TWOEYE.value, 0))
+            self.deck.append(Card(CardSuit.REDJOKER.value, 0))  # add the two black jokers
+            self.deck.append(Card(CardSuit.BLACKJOKER.value, 0))
             for value in range(3, 14):
                 for suit in range(1, 5):  # len CardSuit + 1
                     self.deck.append(Card(suit, value))
@@ -153,7 +153,7 @@ class Game():
         self.__createInitialDeck()
         for playerId, player in self.players.items():
             player.hand.clear()
-            self.__moveCardsFromTop(self.deck, player.hand, 3 + self.round - 1)
+            self.__moveCardsFromTop(self.deck, player.hand, 2 + self.round)
 
         return
 
@@ -225,7 +225,7 @@ class Game():
         """
         if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
-            if len(player.hand) == (3 + self.round - 1):
+            if len(player.hand) == (2 + self.round):
                 self.__moveCardsFromTop(self.deck, player.hand, 1)
 
         return self.playerGameStatus(playerId)
@@ -236,7 +236,7 @@ class Game():
         """
         if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
-            if len(player.hand) == (3 + self.round - 1):
+            if len(player.hand) == (2 + self.round):
                 player.hand.append(self.discard.pop(-1))  # discard is the last card in discard array
 
         return self.playerGameStatus(playerId)
@@ -258,7 +258,7 @@ class Game():
         if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
             print(player.isActive)
-            if len(player.hand) == (3 + self.round - 1) and not player.isActive:
+            if len(player.hand) == (2 + self.round) and not player.isActive:
                 self.activePlayer = self.__nextPlayer(self.activePlayer)
 
         return self.playerGameStatus(playerId)
@@ -269,7 +269,7 @@ class Game():
             # thinking of a structure like this:
             # {"out":, "runs": [{cards ...}, {cards ...}], "books": [{cards ...}, {cards ...}]}
             player = self.players[playerId]
-            if len(player.hand) == (3 + self.round - 1) and not player.isActive:
+            if len(player.hand) == (2 + self.round) and not player.isActive:
                 self.outPlayer = playerId
                 """
                     need to do something here to determine when the next player
