@@ -13,7 +13,9 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-04-02
+Summary of functionality through 2020-04-04
+    
+    + UI messaging, dealing and discard completed (need to debug the later two)
     
     + components of player UI, less how to 'mark' runs and books, complete
     

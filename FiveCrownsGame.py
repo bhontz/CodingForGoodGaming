@@ -97,6 +97,20 @@ class Game():
 
         return newId
 
+    def __makeUniqueName(self, name):
+        """
+            amends player provided name if it is already used
+        """
+        lstNames = []
+
+        for player in self.players.values():
+            lstNames.append(player.name)
+
+        while name in lstNames:
+            name = "Another " + name
+
+        return name
+
     def __nextPlayer(self, playerId):
         """
             returns Player.id of next player in Game.playerOrder, and accommodates wrapping the array
@@ -185,7 +199,7 @@ class Game():
         if playerId in self.players.keys():
             player = self.players[playerId]
             if player.name == "__default__":   # conditional will help prevent players from checking in multiple times
-                self.players[playerId].name = name
+                self.players[playerId].name = self.__makeUniqueName(name)
                 self.checkIns += 1
 
         if self.checkIns >= self.startGameAfterCheckIns:
@@ -199,6 +213,8 @@ class Game():
         """
         d = dict()
 
+        d["id"] = playerId
+        d["name"] = self.players[playerId].name
         d["round"] = self.round
         d["discard"] = json.dumps(self.discard[-1], cls=Encoder)
         d["checkIns"] = self.checkIns
@@ -227,6 +243,7 @@ class Game():
             player = self.players[playerId]
             if len(player.hand) == (2 + self.round):
                 self.__moveCardsFromTop(self.deck, player.hand, 1)
+                player.isActive = True
 
         return self.playerGameStatus(playerId)
 
@@ -238,6 +255,7 @@ class Game():
             player = self.players[playerId]
             if len(player.hand) == (2 + self.round):
                 player.hand.append(self.discard.pop(-1))  # discard is the last card in discard array
+                player.isActive = True
 
         return self.playerGameStatus(playerId)
 
@@ -247,7 +265,7 @@ class Game():
             d = eval(json.loads(cardJSON))
             playerDiscard = Card(d["suit"], d["value"])
 
-            if playerDiscard in player.hand:
+            if playerDiscard in player.hand and len(player.hand) > (2 + self.round):
                 player.hand.remove(playerDiscard)  # doesn't matter if there are multiple playerDiscard cards in hand
                 self.discard.append(playerDiscard)
                 player.isActive = False
@@ -257,7 +275,7 @@ class Game():
     def playerPass(self, playerId):
         if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
-            print(player.isActive)
+            print("player is active?: ".format(player.isActive))
             if len(player.hand) == (2 + self.round) and not player.isActive:
                 self.activePlayer = self.__nextPlayer(self.activePlayer)
 
