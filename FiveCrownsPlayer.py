@@ -8,7 +8,9 @@ class Player():
     def __init__(self, name, uid):
         self.name = name
         self.id = uid  # int id value assigned by server
-        self.isActive = False # assure player took discard action before pass / out
+        # self.isActive = False # assure player took discard action before pass / out
+        self.hasExtraCard = False
+        self.hasDiscarded = False  # this state changes when player passes
         self.hand = [] # of Card
         self.score = []  # of Int
         return

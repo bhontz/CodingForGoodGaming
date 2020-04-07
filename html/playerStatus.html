@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html><body>
+<style>body{background-color:#ffffff;font-size:100%;}</style>
+<div id="main">
+    <h2>Round:&nbsp; {{template["round"]}}</h2>
+    {% if "outPlayer" in template.keys() %}
+        <h1>Player:{{template["outPlayer"]}} is OUT!</h1>
+        <h1>Last Round for: {{template["activePlayer"]}}</h1>
+        <h2>Next Player: {{template["nextPlayer"]}}</h2>
+    {% else %}
+        <h1>Active Player: {{template["activePlayer"]}}</h1>
+        <h2>Next Player: {{template["nextPlayer"]}}</h2>
+    {% endif %}
+</div>
+</body>
+</html>

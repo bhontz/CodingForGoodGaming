@@ -8,6 +8,7 @@ from flask import Flask, render_template_string
 from FiveCrownsGame import Card
 from FiveCrownsPlayer import Player
 
+theURL = "http://192.168.100.35:5000/" # "http://localhost:5000/" # "http://192.168.100.35:5000/"
 
 @functools.lru_cache()
 class GlobalObject(QtCore.QObject):
@@ -34,18 +35,28 @@ class GlobalObject(QtCore.QObject):
     def receiveResponse(self, jsonResponse):
         if jsonResponse:
             self.dictResponse = eval(jsonResponse.content)
-            print("server response:\n {}".format(self.dictResponse))
-            if "activePlayer" in self.dictResponse.keys():
-                if self.thisPlayer.name == self.dictResponse["activePlayer"] and self.thisPlayer.isActive == False:
-                    dlg = PlayerDraw()
-                    # if dlg.exec_():
-                    #     print("success")
-                    # else:
-                    #     print("cancel")
+            print("FROM SERVER:\n {}".format(self.dictResponse))
+            self.__updateThisPlayer()
 
             self.playerMessage()
             self.showDiscard()
             self.updateHand()
+
+            if "activePlayer" in self.dictResponse.keys():
+                if self.thisPlayer.name == self.dictResponse["activePlayer"]:
+                    if not self.thisPlayer.hasExtraCard and not self.thisPlayer.hasDiscarded:
+                        print("calling PlayerDraw Dialog with extraCard:{} and hasDiscarded:{}".format(self.thisPlayer.hasExtraCard, self.thisPlayer.hasDiscarded))
+                        dlg = PlayerDraw()
+                        if not dlg.exec_():
+                            pass
+                            # print("DIALOG: canceled PlayerDraw")
+                    elif self.thisPlayer.hasDiscarded:
+                        # print("calling PlayerPass Dialog with extraCard:{} and hasDiscarded:{}".format(self.thisPlayer.hasExtraCard, self.thisPlayer.hasDiscarded))
+                        dlg = PlayerPass()
+                        if not dlg.exec_():
+                            pass
+                            # print("DIALOG: canceled PlayerPass")
+
         return
 
     def playerMessage(self):
@@ -58,7 +69,7 @@ class GlobalObject(QtCore.QObject):
         return
 
     def updateHand(self):
-        if self.thisPlayer.isActive:
+        if "activePlayer" in self.dictResponse.keys() and self.thisPlayer.name == self.dictResponse["activePlayer"]:
             self.dispatchEvent("updateHand")
         return
 
@@ -70,7 +81,61 @@ class GlobalObject(QtCore.QObject):
         """
             TODO: need to get this from somewhere
         """
-        return "http://localhost:5000/"
+        return theURL
+
+    def __updateThisPlayer(self):
+        """
+            The player in the global object has fields that need to be updated from server responses
+        """
+        if "activePlayer" in self.dictResponse.keys() and self.thisPlayer.name == self.dictResponse["activePlayer"]:
+            self.thisPlayer.hasExtraCard = self.dictResponse["hasExtraCard"]
+            self.thisPlayer.hasDiscarded = self.dictResponse["hasDiscarded"]
+
+
+class PlayerPass(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.gObj = GlobalObject()
+        self.initUI()
+
+    def initUI(self):
+        dlgMsg = QLabel(self)
+        dlgMsg.setText("{}, Pass or Out?".format(self.gObj.thisPlayer.name))
+
+        btnPass = QPushButton("I pass")
+        if "outPlayer" in self.gObj.dictResponse.keys():
+            btnPass.setEnabled(False)
+        btnPass.clicked.connect(self.clickedPass)
+        orMsg = QLabel(self)
+        orMsg.setText("  OR  ")
+        btnOut = QPushButton("I\'m out!")
+        btnOut.clicked.connect(self.clickedOut)
+        hBox = QHBoxLayout()
+        hBox.addStretch(1)
+        hBox.addWidget(btnPass)
+        hBox.addWidget(orMsg)
+        hBox.addWidget(btnOut)
+
+        vBox = QVBoxLayout()
+        vBox.addWidget(dlgMsg, 10)
+        vBox.addLayout(hBox, 90)
+        self.setLayout(vBox)
+
+        # NOTE you shouldn't put the name in the window title, it should be within the layout so the layout resizes accordingly
+        self.setGeometry(300, 300, 200, 150)
+        self.setWindowTitle("Player Action Required")
+        self.show()
+
+    def clickedPass(self, event):
+        strMsg = "{}pass?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
+        self.gObj.receiveResponse(requests.get(strMsg))
+        self.close()
+
+    def clickedOut(self, event):
+        strMsg = "{}out?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
+        print("player is out".format(strMsg))
+        self.gObj.receiveResponse(requests.get(strMsg))
+        self.close()
 
 class PlayerDraw(QDialog):
     def __init__(self):
@@ -80,7 +145,7 @@ class PlayerDraw(QDialog):
 
     def initUI(self):
         msg = QLabel(self)
-        msg.setText("Click to Draw from Deck or Discard")
+        msg.setText("Click to Draw from Deck or Discard Pile")
         deck = QLabel(self)
         deck.setPixmap(QPixmap("cardimages/0_0.svg"))
         deck.mouseReleaseEvent = self.clickedDeck
@@ -102,22 +167,20 @@ class PlayerDraw(QDialog):
         self.setLayout(vBox)
 
         self.setGeometry(300, 300, 200, 150)
-        self.setWindowTitle('Draw a card')
+        self.setWindowTitle("IT\'s YOUR TURN!")
         self.show()
 
     def clickedDeck(self, event):
         strMsg = "{}pickDeck?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
-        print("draw from deck".format(strMsg))
+        # print("draw from deck".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
         self.close()
-        return
 
     def clickedDiscard(self, event):
         strMsg = "{}pickDiscard?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
-        print("draw from discard".format(strMsg))
+        # print("draw from discard".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
         self.close()
-        return
 
 
 class PlayerCheckIn(QDialog):
@@ -156,15 +219,14 @@ class PlayerCheckIn(QDialog):
 
     def __playerCheckIn(self):
         strCheckIn = "{}&name={}".format(self.playerURL.text().strip(), quote(self.playerName.text()))
-        print("player just checked In as:{}".format(strCheckIn))
+        print("FROM Dialog PlayerCheckIn - just checked In as: {}".format(strCheckIn))
         response = requests.get(strCheckIn)
         # in this case, we're going to pull the id right away so we can create the GlobalObject thisPlayer
         if response:
             d = eval(response.content)
             if "id" in d.keys():
                 self.gObj.thisPlayer = Player(self.playerName.text(), d["id"])
-                print("assigned player name:{} and id:{}".format(self.gObj.thisPlayer.name, self.gObj.getPlayerId()))
-            self.gObj.receiveResponse(response)
+                self.gObj.receiveResponse(response)
 
         self.close()
 
@@ -188,6 +250,7 @@ class CardIcon(QLabel):
         """
         self.d = eval(item)
         imageName = "cardimages/{}_{}.svg".format(self.d["suit"],self.d["value"])
+        # print("imageName: {}".format(imageName))
         self.setPixmap(QPixmap(imageName))
         self.show()
         return
@@ -231,7 +294,6 @@ class CardIcon(QLabel):
             event.acceptProposedAction()
             GlobalObject().dispatchEvent("dropCard")
 
-
 class CardDiscardIcon(CardIcon):
     def __init__(self, item, parent):
         super().__init__(item, parent)
@@ -244,7 +306,7 @@ class CardDiscardIcon(CardIcon):
 
     def dropEvent(self, event):
         qObj = GlobalObject()
-        if qObj.thisPlayer.isActive:
+        if qObj.thisPlayer.hasExtraCard and not qObj.thisPlayer.hasDiscarded:
             pos = event.pos()
             if event.mimeData().hasText():
                 text = event.mimeData().text()
@@ -254,7 +316,7 @@ class CardDiscardIcon(CardIcon):
                 self.show()
                 event.acceptProposedAction()
                 strDiscard = "{}discard?id={}&card={}".format(qObj.getServerURL().strip(), qObj.getPlayerId(), json.dumps(text))
-                print("Player is discarding:{}".format(strDiscard))
+                # print("Player is discarding:{}".format(strDiscard))
                 response = requests.get(strDiscard)
                 if response:
                     qObj.receiveResponse(response)
@@ -269,11 +331,10 @@ class App(QDialog):
         self.width = 744
         self.height = 562
         self.handGroupBox = QGroupBox("Player Hand:")
+        self.gridHand = QGridLayout()
         self.gObj = GlobalObject()
-        #self.cardArray = [{"suit":1,"value":1},{"suit":1,"value":2},{"suit":1,"value":3},{"suit":1,"value":4},{"suit":1,"value":5},{"suit":1,"value":6}]
         self.cardArray = []
         self.cardIcons = []  # local hand, reordered from server's copy
-        #self.__initHand()
         self.discardCardIcon = CardDiscardIcon(json.dumps({"suit":0, "value":0}), self)
         self.gObj.addEventListener("dropCard", self.cardMoved)
         self.gObj.addEventListener("playerMessage", self.__playerMessage)
@@ -282,10 +343,9 @@ class App(QDialog):
         self.flaskApp = Flask(self.title)
 
         dlg = PlayerCheckIn()  # present at app launch
-        if dlg.exec_():   # you need to keep this here as the dialog WAITS ON THIS
-            print("success")
-        else:
-            print("cancel!")  # if we need to figure out if the dialog closed, here's how
+        if not dlg.exec_():
+            pass
+            # print("DIALOG: canceled PlayerCheckIn")
 
         self.initUI()
 
@@ -311,7 +371,8 @@ class App(QDialog):
         self.grpMessage.setTitle("Message:")
         self.msgText = QLabel()
         self.msgText.setTextFormat(Qt.RichText)
-        self.msgText.setText(self.__playerMessage())
+        self.__playerMessage()
+        # self.msgText.setText(self.__playerMessage())
         msgGrid = QGridLayout()
         msgGrid.addWidget(self.msgText)
         self.grpMessage.setLayout(msgGrid)
@@ -336,14 +397,17 @@ class App(QDialog):
         self.hzMsgDiscard.addLayout(self.vrtSubmitDiscard, 20)
         self.vrtMain.addLayout(self.hzMsgDiscard, 40)
 
+        grpHand = QGroupBox("Player Hand:")
         self.__playerHand()
-        self.vrtMain.addWidget(self.handGroupBox)
+        grpHand.setLayout(self.gridHand)
+        self.vrtMain.addWidget(grpHand)
 
         # self.createGridLayout()
         # self.vrtMain.addWidget(self.horizontalGroupBox)
 
         self.setLayout(self.vrtMain)
         self.show()
+
 
     def __playerStatus(self, playerId):
         strStatus = "{}playerStatus?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
@@ -354,7 +418,6 @@ class App(QDialog):
     def __playerMessage(self):
         """
             Updates the message box
-            TODO: use HTML TEMPLATES
         """
         msg = "<html><body><h1>Welcome to Five Crowns!</h1></body></html>"
         if self.gObj.dictResponse:
@@ -367,7 +430,9 @@ class App(QDialog):
             else:
                 msg = self.__htmlMessage("playerStatus.html", d)
 
-        return msg
+        self.msgText.setText(msg)
+
+        return
 
     @QtCore.pyqtSlot()
     def __showDiscard(self):
@@ -378,42 +443,39 @@ class App(QDialog):
 
         return
 
-    # def __initHand(self):
-    #     for i in range(0, len(self.cardArray)):
-    #         s = json.dumps(self.cardArray[i])
-    #         self.cardIcons.append(CardIcon(s, self))
-    #     return
-
     @QtCore.pyqtSlot()
     def __playerHand(self):
         """
             syncs player's local hand with server, accounting for changes and retaining local hand order
         """
+
         if self.gObj.dictResponse:
             serverHand = eval(self.gObj.dictResponse["hand"])
-            print("server:{} local:{}".format(serverHand, self.cardArray))
+            print("HAND:\n server:{} local:{}".format(serverHand, self.cardArray))
             if len(serverHand) > len(self.cardArray):
                 inServerNotLocal = list(itertools.filterfalse(lambda i: i in self.cardArray, serverHand))
                 self.cardArray.extend(inServerNotLocal)
-                print("inServerNotLocal:{}".format(inServerNotLocal))
+                # print("inServerNotLocal:{}".format(inServerNotLocal))
             else:
                 inLocalNotServer = list(itertools.filterfalse(lambda i: i in serverHand, self.cardArray))
                 for card in inLocalNotServer:
                     self.cardArray.remove(card)
-                print("inLocalNotServer:{}".format(inLocalNotServer))
+                # print("inLocalNotServer:{}".format(inLocalNotServer))
 
             self.cardIcons = []
-            layout = QGridLayout()
+
+            # you have to kill off the grid widgets and add them back in using this technique
+            for i in reversed(range(self.gridHand.count())):
+                widgetToRemove = self.gridHand.itemAt(i).widget()
+                widgetToRemove.setParent(None)
+                widgetToRemove.deleteLater()
 
             for i, card in enumerate(self.cardArray):
                 s = json.dumps(card)
                 self.cardIcons.append(CardIcon(s, self))
-                layout.addWidget(self.cardIcons[i], 0, i)  # gotta do something here when i > 7
-
-            self.handGroupBox.setLayout(layout)
+                self.gridHand.addWidget(self.cardIcons[i], 0, i)  # gotta do something here when i > 7
 
         return
-
 
     def __reorderHand(self):
         """
@@ -422,12 +484,11 @@ class App(QDialog):
         # print("before: {}".format(self.cardArray))
         # print("-------------------")
 
-        for i, card in enumerate(self.cardIcons):
+        for destIdx, card in enumerate(self.cardIcons):
             card = card.exposeCard()
-            if card != self.cardArray[i]:
+            if card != self.cardArray[destIdx]:
                 break
 
-        destIdx = i
         sourceIdx = self.cardArray.index(card)
         # print("destIdx:{} sourceIdx:{} sourceCard:{}".format(destIdx, sourceIdx, card))
         card = self.cardArray.pop(sourceIdx)

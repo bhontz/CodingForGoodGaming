@@ -2,7 +2,7 @@ import os, sys, requests, json, random, time
 from enum import Enum
 from json import JSONEncoder
 from datetime import datetime
-from FiveCrownsPlayer import *
+from FiveCrownsPlayer import Player
 
 class CardSuit(Enum):
     CLUB  = 1
@@ -62,6 +62,7 @@ class Game():
         """
             create two standard card decks that include 2 jokers but exclude 2s and aces
         """
+        self.deck.clear()
         for i in range(0, 2):
             self.deck.append(Card(CardSuit.REDJOKER.value, 0))  # add the two black jokers
             self.deck.append(Card(CardSuit.BLACKJOKER.value, 0))
@@ -159,7 +160,6 @@ class Game():
         else:
             self.dealer = self.__nextPlayer(self.dealer)
             self.activePlayer = self.__nextPlayer(self.dealer)
-            self.players[self.activePlayer].isActive = True
 
         self.round += 1   # do we to recognize the end of the game through this method??
 
@@ -167,6 +167,8 @@ class Game():
         self.__createInitialDeck()
         for playerId, player in self.players.items():
             player.hand.clear()
+            player.hasExtraCard = False
+            player.hasDiscarded = False
             self.__moveCardsFromTop(self.deck, player.hand, 2 + self.round)
 
         return
@@ -223,6 +225,14 @@ class Game():
         if self.activePlayer:
             d["activePlayer"] = self.players[self.activePlayer].name
             d["nextPlayer"] = self.players[self.__nextPlayer(self.activePlayer)].name
+            if not self.players[self.activePlayer].hasExtraCard:
+                d["hasExtraCard"] = 0  # can't pass true, false as JSON
+            else:
+                d["hasExtraCard"] = 1
+            if not self.players[self.activePlayer].hasDiscarded:
+                d["hasDiscarded"] = 0
+            else:
+                d["hasDiscarded"] = 1
 
         if self.outPlayer:
             d["outPlayer"] = self.players[self.outPlayer].name
@@ -243,7 +253,7 @@ class Game():
             player = self.players[playerId]
             if len(player.hand) == (2 + self.round):
                 self.__moveCardsFromTop(self.deck, player.hand, 1)
-                player.isActive = True
+                player.hasExtraCard = True
 
         return self.playerGameStatus(playerId)
 
@@ -255,7 +265,10 @@ class Game():
             player = self.players[playerId]
             if len(player.hand) == (2 + self.round):
                 player.hand.append(self.discard.pop(-1))  # discard is the last card in discard array
-                player.isActive = True
+                player.hasExtraCard = True
+
+            if not self.discard:   # this can happen if the only card is drawn
+                self.__moveCardsFromTop(self.deck, self.discard, 1)
 
         return self.playerGameStatus(playerId)
 
@@ -268,37 +281,54 @@ class Game():
             if playerDiscard in player.hand and len(player.hand) > (2 + self.round):
                 player.hand.remove(playerDiscard)  # doesn't matter if there are multiple playerDiscard cards in hand
                 self.discard.append(playerDiscard)
-                player.isActive = False
+                player.hasExtraCard = False
+                player.hasDiscarded = True
 
         return self.playerGameStatus(playerId)
 
     def playerPass(self, playerId):
         if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
-            print("player is active?: ".format(player.isActive))
-            if len(player.hand) == (2 + self.round) and not player.isActive:
+            if len(player.hand) == (2 + self.round) and player.hasDiscarded == True:
                 self.activePlayer = self.__nextPlayer(self.activePlayer)
+                player.hasDiscarded = False
 
         return self.playerGameStatus(playerId)
 
-    def playerOut(self, playerId, outCards):
+    def playerOut(self, playerId):
         if playerId in self.players.keys() and playerId == self.activePlayer:
             # need some form of validation here !!!
             # thinking of a structure like this:
             # {"out":, "runs": [{cards ...}, {cards ...}], "books": [{cards ...}, {cards ...}]}
             player = self.players[playerId]
-            if len(player.hand) == (2 + self.round) and not player.isActive:
-                self.outPlayer = playerId
-                """
-                    need to do something here to determine when the next player
-                    is once again the outPlayer, as that would end the round.
-                    Additionally, once round > 11 we end the game.  Should
-                    email round scores to everyone after game.  Need to write
-                    clear rules for the client in terms of "out" e.g. once outPlayer 
-                    is set, then "pass" is no longer enabled on the client, only "out"
-                """
+            if len(player.hand) == (2 + self.round) and player.hasDiscarded == True:
+                if not self.outPlayer:   # outPlayer is the first one out
+                    self.outPlayer = playerId
+
                 self.activePlayer = self.__nextPlayer(self.activePlayer)
-                # set player's score for this round to 0
+                player.hasDiscarded = False
+
+                if self.activePlayer == self.outPlayer:  # start a new round!
+                    if self.round == 2:  # testing here
+                        print("game is over now!")
+                        sys.exit(0)
+                    else:
+                        print("SHOULD BE STARTING THE NEXT ROUND...")
+                        self.__startNextRound()
+                #
+                #
+                #
+                # """
+                #     need to do something here to determine when the next player
+                #     is once again the outPlayer, as that would end the round.
+                #     Additionally, once round > 11 we end the game.  Should
+                #     email round scores to everyone after game.  Need to write
+                #     clear rules for the client in terms of "out" e.g. once outPlayer
+                #     is set, then "pass" is no longer enabled on the client, only "out"
+                # """
+                # self.activePlayer = self.__nextPlayer(self.activePlayer)
+                # player.hasDiscarded = False
+                # # set player's score for this round to 0
 
         return self.playerGameStatus(playerId)
 
@@ -308,19 +338,5 @@ class Game():
         """
 
         return json.dumps(self.playerOrder)
-
-
-    # def getDeck(self):
-    #     return json.dumps(self.deck, cls=Encoder)
-    #
-    # def randomCardFromDeck(self):
-    #     if self.deck:
-    #         card = random.choice(self.deck)
-    #         return json.dumps(card, cls=Encoder)
-    #
-    # def showDiscard(self):
-    #     if self.discard:
-    #         return json.dumps(self.discard[-1], cls=Encoder)
-    #
 
 
