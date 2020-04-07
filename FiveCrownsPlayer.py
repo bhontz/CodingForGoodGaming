@@ -12,11 +12,13 @@ class Player():
         self.hasExtraCard = False
         self.hasDiscarded = False  # this state changes when player passes
         self.hand = [] # of Card
+        self.outhand = [] # of Card, hand after player went out, in their ordering
         self.score = []  # of Int
         return
 
     def __del__(self):
         del self.hand
+        del self.outhand
         del self.score
         del self
         return

@@ -50,7 +50,8 @@ class Game():
         self.round = 0
         self.checkIns = 0
         self.startGameAfterCheckIns = 0
-        self.currentGameStatus = "not active"
+        self.roundOver = 0
+        self.gameOver = 0
         self.__createInitialDeck()
 
         return
@@ -71,7 +72,8 @@ class Game():
                     self.deck.append(Card(suit, value))
 
         # now shuffle deck and deal initial discard
-        random.shuffle(self.deck)
+        for i in range(0, random.randint(1, 7)):  # i wasn't happy with the shuffle in practice
+            random.shuffle(self.deck)
         self.discard.clear()
         self.__moveCardsFromTop(self.deck, self.discard, 1)
 
@@ -147,6 +149,7 @@ class Game():
 
         del d
 
+        self.gameOn = 1
         self.__startNextRound()
 
         return
@@ -156,10 +159,12 @@ class Game():
             starts a new round
         """
         if self.round == 0:
+            self.dealer = self.playerOrder[0]
             self.activePlayer = self.__nextPlayer(self.playerOrder[0])  # there must be at least one player to get this far ...
         else:
             self.dealer = self.__nextPlayer(self.dealer)
             self.activePlayer = self.__nextPlayer(self.dealer)
+            self.outPlayer = 0
 
         self.round += 1   # do we to recognize the end of the game through this method??
 
@@ -208,42 +213,6 @@ class Game():
             self.__startGame()  # will start game now given checkIns
 
         return self.playerGameStatus(playerId)
-
-    def playerGameStatus(self, playerId):
-        """
-            sends a data bundle back to player with current game status and player's specifics
-        """
-        d = dict()
-
-        d["id"] = playerId
-        d["name"] = self.players[playerId].name
-        d["round"] = self.round
-        d["discard"] = json.dumps(self.discard[-1], cls=Encoder)
-        d["checkIns"] = self.checkIns
-        d["startGameAfterCheckIns"] = self.startGameAfterCheckIns
-
-        if self.activePlayer:
-            d["activePlayer"] = self.players[self.activePlayer].name
-            d["nextPlayer"] = self.players[self.__nextPlayer(self.activePlayer)].name
-            if not self.players[self.activePlayer].hasExtraCard:
-                d["hasExtraCard"] = 0  # can't pass true, false as JSON
-            else:
-                d["hasExtraCard"] = 1
-            if not self.players[self.activePlayer].hasDiscarded:
-                d["hasDiscarded"] = 0
-            else:
-                d["hasDiscarded"] = 1
-
-        if self.outPlayer:
-            d["outPlayer"] = self.players[self.outPlayer].name
-
-        if playerId in self.players.keys():
-            player = self.players[playerId]
-            if player:
-                d["hand"] = json.dumps(player.hand, cls=Encoder)
-                d["score"] = player.score
-
-        return json.dumps(d)
 
     def pickFromDeck(self, playerId):
         """
@@ -295,11 +264,8 @@ class Game():
 
         return self.playerGameStatus(playerId)
 
-    def playerOut(self, playerId):
+    def playerOut(self, playerId, outHand):
         if playerId in self.players.keys() and playerId == self.activePlayer:
-            # need some form of validation here !!!
-            # thinking of a structure like this:
-            # {"out":, "runs": [{cards ...}, {cards ...}], "books": [{cards ...}, {cards ...}]}
             player = self.players[playerId]
             if len(player.hand) == (2 + self.round) and player.hasDiscarded == True:
                 if not self.outPlayer:   # outPlayer is the first one out
@@ -308,13 +274,18 @@ class Game():
                 self.activePlayer = self.__nextPlayer(self.activePlayer)
                 player.hasDiscarded = False
 
+                player.outhand = eval(outHand)  # this is the players hand in their ordering when then went out
+                print("Player's OUTHAND\n{}: ".format(player.outhand))
+
                 if self.activePlayer == self.outPlayer:  # start a new round!
                     if self.round == 2:  # testing here
-                        print("game is over now!")
+                        print("--- GAME IS OVER AFTER ROUND: {} ---".format(self.round))
+                        self.gameOver = 1
                         sys.exit(0)
                     else:
-                        print("SHOULD BE STARTING THE NEXT ROUND...")
-                        self.__startNextRound()
+                        print("START OF ROUND:{}".format(self.round + 1))
+                        self.roundOver = 1
+                        #self.__startNextRound()  need a UI to launch next round
                 #
                 #
                 #
@@ -331,6 +302,55 @@ class Game():
                 # # set player's score for this round to 0
 
         return self.playerGameStatus(playerId)
+
+    def playerGameStatus(self, playerId):
+        """
+            sends a data bundle back to player with current game status and player's specifics
+        """
+        d = dict()
+
+        if self.roundOver == 1:
+            d["roundOver"] = 1
+            d["round"] = self.round
+            d["outPlayer"] = self.players[self.outPlayer].name
+            lstPlayers = list()
+            for playerId in self.players.keys():
+                dPlayer = dict(name=self.players[playerId].name, outHand=json.dumps(self.players[playerId].outhand))
+                lstPlayers.append(dPlayer)
+            d["playerHands"] = json.dumps(lstPlayers)
+            d["discard"] = json.dumps(dict(suit=0, value=0), cls=Encoder)
+
+        else:
+
+            d["id"] = playerId
+            d["name"] = self.players[playerId].name
+            d["round"] = self.round
+            d["discard"] = json.dumps(self.discard[-1], cls=Encoder)
+            d["checkIns"] = self.checkIns
+            d["startGameAfterCheckIns"] = self.startGameAfterCheckIns
+
+            if self.activePlayer:
+                d["activePlayer"] = self.players[self.activePlayer].name
+                d["nextPlayer"] = self.players[self.__nextPlayer(self.activePlayer)].name
+                if not self.players[self.activePlayer].hasExtraCard:
+                    d["hasExtraCard"] = 0  # can't pass true, false as JSON
+                else:
+                    d["hasExtraCard"] = 1
+                if not self.players[self.activePlayer].hasDiscarded:
+                    d["hasDiscarded"] = 0
+                else:
+                    d["hasDiscarded"] = 1
+
+            if self.outPlayer:
+                d["outPlayer"] = self.players[self.outPlayer].name
+
+            if playerId in self.players.keys():
+                player = self.players[playerId]
+                if player:
+                    d["hand"] = json.dumps(player.hand, cls=Encoder)
+                    d["score"] = player.score
+
+        return json.dumps(d)
 
     def peakIds(self):
         """

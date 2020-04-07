@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QLabel, QWidget, QPushButton, QDialog, QVBoxLayout, QGridLayout, QGroupBox, QApplication, QLineEdit, QHBoxLayout)
+from PyQt5.QtWidgets import (QLabel, QScrollArea, QDesktopWidget, QPushButton, QDialog, QVBoxLayout, QGridLayout, QGroupBox, QApplication, QLineEdit, QHBoxLayout)
 from PyQt5.QtGui import QPixmap, QDrag, QPainter, QIcon
 from PyQt5.QtCore import QMimeData, Qt
 from PyQt5 import QtCore
@@ -45,7 +45,7 @@ class GlobalObject(QtCore.QObject):
             if "activePlayer" in self.dictResponse.keys():
                 if self.thisPlayer.name == self.dictResponse["activePlayer"]:
                     if not self.thisPlayer.hasExtraCard and not self.thisPlayer.hasDiscarded:
-                        print("calling PlayerDraw Dialog with extraCard:{} and hasDiscarded:{}".format(self.thisPlayer.hasExtraCard, self.thisPlayer.hasDiscarded))
+                        # print("calling PlayerDraw Dialog with extraCard:{} and hasDiscarded:{}".format(self.thisPlayer.hasExtraCard, self.thisPlayer.hasDiscarded))
                         dlg = PlayerDraw()
                         if not dlg.exec_():
                             pass
@@ -73,7 +73,6 @@ class GlobalObject(QtCore.QObject):
             self.dispatchEvent("updateHand")
         return
 
-
     def getPlayerId(self):
         return self.thisPlayer.id
 
@@ -90,7 +89,6 @@ class GlobalObject(QtCore.QObject):
         if "activePlayer" in self.dictResponse.keys() and self.thisPlayer.name == self.dictResponse["activePlayer"]:
             self.thisPlayer.hasExtraCard = self.dictResponse["hasExtraCard"]
             self.thisPlayer.hasDiscarded = self.dictResponse["hasDiscarded"]
-
 
 class PlayerPass(QDialog):
     def __init__(self):
@@ -121,10 +119,19 @@ class PlayerPass(QDialog):
         vBox.addLayout(hBox, 90)
         self.setLayout(vBox)
 
-        # NOTE you shouldn't put the name in the window title, it should be within the layout so the layout resizes accordingly
-        self.setGeometry(300, 300, 200, 150)
+        #self.setGeometry(300, 300, 200, 150)
+
+        self.resize(200, 150)
+        self.__centerOnScreen()
+
         self.setWindowTitle("Player Action Required")
         self.show()
+
+    def __centerOnScreen(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
     def clickedPass(self, event):
         strMsg = "{}pass?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
@@ -132,8 +139,11 @@ class PlayerPass(QDialog):
         self.close()
 
     def clickedOut(self, event):
-        strMsg = "{}out?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
-        print("player is out".format(strMsg))
+        """
+            when a player goes out, we send his local hand back to the server via player.outhand
+        """
+        strMsg = "{}out?id={}&outhand={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId(), json.dumps(self.gObj.thisPlayer.outhand))
+        print("UI-clickedOut\n{}".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
         self.close()
 
@@ -166,9 +176,19 @@ class PlayerDraw(QDialog):
         vBox.addLayout(hBox, 90)
         self.setLayout(vBox)
 
-        self.setGeometry(300, 300, 200, 150)
+        #self.setGeometry(300, 300, 200, 150)
+
+        self.resize(200, 150)
+        self.__centerOnScreen()
+
         self.setWindowTitle("IT\'s YOUR TURN!")
         self.show()
+
+    def __centerOnScreen(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
     def clickedDeck(self, event):
         strMsg = "{}pickDeck?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
@@ -181,7 +201,6 @@ class PlayerDraw(QDialog):
         # print("draw from discard".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
         self.close()
-
 
 class PlayerCheckIn(QDialog):
 
@@ -213,9 +232,16 @@ class PlayerCheckIn(QDialog):
 
         self.setLayout(vbox)
 
-        self.setGeometry(300, 300, 500, 150)
+        self.resize(500, 150)
+        self.__centerOnScreen()
         self.setWindowTitle('Player Check In')
         self.show()
+
+    def __centerOnScreen(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
     def __playerCheckIn(self):
         strCheckIn = "{}&name={}".format(self.playerURL.text().strip(), quote(self.playerName.text()))
@@ -239,6 +265,7 @@ class CardIcon(QLabel):
         self.d = eval(item)
         imageName = "cardimages/{}_{}.svg".format(self.d["suit"], self.d["value"])
         self.setPixmap(QPixmap(imageName))
+
         self.show()
 
     def exposeCard(self):
@@ -326,12 +353,13 @@ class App(QDialog):
     def __init__(self):
         super().__init__()
         self.title = 'Fivecrowns Player UI'
-        self.left = 10
-        self.top = 10
-        self.width = 744
-        self.height = 562
+        # self.left = 10
+        # self.top = 10
+        self.width = 1200 #800
+        self.height = 800 #600
         self.handGroupBox = QGroupBox("Player Hand:")
         self.gridHand = QGridLayout()
+        self.msgText = QLabel()
         self.gObj = GlobalObject()
         self.cardArray = []
         self.cardIcons = []  # local hand, reordered from server's copy
@@ -340,6 +368,7 @@ class App(QDialog):
         self.gObj.addEventListener("playerMessage", self.__playerMessage)
         self.gObj.addEventListener("showDiscard", self.__showDiscard)
         self.gObj.addEventListener("updateHand", self.__playerHand)
+        self.gObj.addEventListener("outHand", self.__outHand)
         self.flaskApp = Flask(self.title)
 
         dlg = PlayerCheckIn()  # present at app launch
@@ -357,7 +386,9 @@ class App(QDialog):
 
     def initUI(self):
         self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
+        # self.setGeometry(self.left, self.top, self.width, self.height)
+        self.resize(self.width, self.height)
+        self.__centerOnScreen()
 
         self.vrtMain = QVBoxLayout() # self.verticalLayoutWidget
         self.vrtMain.setContentsMargins(0, 0, 0, 0)
@@ -369,12 +400,16 @@ class App(QDialog):
         self.grpMessage = QGroupBox()
         self.grpMessage.setObjectName("grpMessage")
         self.grpMessage.setTitle("Message:")
-        self.msgText = QLabel()
+        # self.msgText = QLabel()
         self.msgText.setTextFormat(Qt.RichText)
+        self.msgText.setMinimumSize(800,800)
         self.__playerMessage()
-        # self.msgText.setText(self.__playerMessage())
+        scrollArea = QScrollArea()
+        scrollArea.setWidget(self.msgText)
+        scrollArea.ensureWidgetVisible(self.msgText)
         msgGrid = QGridLayout()
-        msgGrid.addWidget(self.msgText)
+        msgGrid.addWidget(scrollArea)
+        # msgGrid.addWidget(self.msgText)
         self.grpMessage.setLayout(msgGrid)
         self.hzMsgDiscard.addWidget(self.grpMessage, 80)
 
@@ -402,12 +437,14 @@ class App(QDialog):
         grpHand.setLayout(self.gridHand)
         self.vrtMain.addWidget(grpHand)
 
-        # self.createGridLayout()
-        # self.vrtMain.addWidget(self.horizontalGroupBox)
-
         self.setLayout(self.vrtMain)
         self.show()
 
+    def __centerOnScreen(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
     def __playerStatus(self, playerId):
         strStatus = "{}playerStatus?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
@@ -420,16 +457,36 @@ class App(QDialog):
             Updates the message box
         """
         msg = "<html><body><h1>Welcome to Five Crowns!</h1></body></html>"
+        dMsg = {}
         if self.gObj.dictResponse:
             d = self.gObj.dictResponse
-            if not d["round"]:
+            if "roundOver" in d.keys():
+                for k, v in d.items():
+                    if k == "playerHands":
+                        lstInner = []
+                        lstPlayers = eval(v)
+                        for p in lstPlayers:
+                            dInner = {}
+                            dInner["name"] = p["name"]
+                            dInner["outHand"] = eval(p["outHand"])
+                        lstInner.append(dInner)
+                        dMsg["playerHands"] = lstInner
+                    else:
+                        dMsg[k] = v
+
+                msg = self.__htmlMessage("roundOver.html", dMsg)
+                print("dMsg:{}".format(dMsg))
+
+            elif not d["round"]:
                 left = d["startGameAfterCheckIns"] - d["checkIns"]
                 dMsg = dict(name=d["name"], left=left)
                 msg = self.__htmlMessage("checkedIn.html", dMsg)
                 del dMsg
+
             else:
                 msg = self.__htmlMessage("playerStatus.html", d)
 
+        del dMsg
         self.msgText.setText(msg)
 
         return
@@ -447,11 +504,12 @@ class App(QDialog):
     def __playerHand(self):
         """
             syncs player's local hand with server, accounting for changes and retaining local hand order
+            TODO: local hand needs to wipe when the round changes
         """
 
         if self.gObj.dictResponse:
             serverHand = eval(self.gObj.dictResponse["hand"])
-            print("HAND:\n server:{} local:{}".format(serverHand, self.cardArray))
+            # print("HAND:\n server:{} local:{}".format(serverHand, self.cardArray))
             if len(serverHand) > len(self.cardArray):
                 inServerNotLocal = list(itertools.filterfalse(lambda i: i in self.cardArray, serverHand))
                 self.cardArray.extend(inServerNotLocal)
@@ -470,10 +528,18 @@ class App(QDialog):
                 widgetToRemove.setParent(None)
                 widgetToRemove.deleteLater()
 
+            row = 0
+            col = 0
             for i, card in enumerate(self.cardArray):
                 s = json.dumps(card)
                 self.cardIcons.append(CardIcon(s, self))
-                self.gridHand.addWidget(self.cardIcons[i], 0, i)  # gotta do something here when i > 7
+                if i and not (i % 4):
+                    row += 1
+                    col = 0
+                self.gridHand.addWidget(self.cardIcons[i], row, col)  # gotta do something here when i > 7
+                col += 1
+
+            self.gObj.thisPlayer.outhand = list(self.cardArray)
 
         return
 
@@ -481,8 +547,6 @@ class App(QDialog):
         """
             entire local hand is reordered when user drops a card in a new location
         """
-        # print("before: {}".format(self.cardArray))
-        # print("-------------------")
 
         for destIdx, card in enumerate(self.cardIcons):
             card = card.exposeCard()
@@ -497,6 +561,18 @@ class App(QDialog):
         for i, card in enumerate(self.cardIcons):   # update all cards and local deck
             card.updateImage(json.dumps(self.cardArray[i]))
         # print("after: {}".format(self.cardArray))
+
+        self.gObj.thisPlayer.outhand = list(self.cardArray) # keep the local hand ordering here for when the player goes out
+
+        return
+
+    @QtCore.pyqtSlot()
+    def __outHand(self):
+        """
+            called when a player goes out, used to need to clear their local hand
+        """
+        self.cardArray = []
+        self.cardIcons = []
 
         return
 
@@ -522,19 +598,6 @@ class App(QDialog):
         self.__reorderHand()
 
         return
-
-    # def createGridLayout(self):
-    #     self.horizontalGroupBox = QGroupBox("Player Hand:")
-    #     layout = QGridLayout()
-    #
-    #     ii = 0
-    #     for i in range(0, 2):  # 2 rows of 3 columns
-    #         for j in range(0, 3):
-    #             print("ii:{}, i:{}, j:{},card:{}".format(ii, i, j, self.cardIcons[ii].exposeCard()))
-    #             layout.addWidget(self.cardIcons[ii], i, j)
-    #             ii += 1
-    #
-    #     self.horizontalGroupBox.setLayout(layout)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

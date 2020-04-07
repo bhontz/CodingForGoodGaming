@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html><body>
+<style>body{background-color:#ffffff;font-size:100%;}</style>
+<div>
+    <h1>Round {{template["round"]}} Over! Out Player: {{template["outPlayer"]}}</h1>
+    {% for player in template["playerHands"] %}
+        <h3>
+        {{player["name"]}}&nbsp;        
+        {% for card in player["outHand"] %}
+            <img src="cardimages/{{card["suit"]}}_{{card["value"]}}.svg" width="50" alt="image">&nbsp;
+        {% endfor %}
+        </h3><br/>
+    {% endfor %}
+</div>
+</body>
+</html>

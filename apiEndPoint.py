@@ -143,10 +143,11 @@ def playerPass():
 @api.route('/out', methods=['GET'])
 def playerOut():
     id = request.args.get('id', default=-1, type=int)
+    outhand = request.args.get('outhand', default="{}", type=str)
 
     s = "out error"
     if id != -1:
-        s = thisGame.playerOut(id)
+        s = thisGame.playerOut(id, outhand)
 
     return s
 
