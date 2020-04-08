@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html><body>
 <style>body{background-color:#ffffff;font-size:100%;}</style>
-<div>
-    <h1>Round {{template["round"]}} Over! Out Player: {{template["outPlayer"]}}</h1>
+<div>{% if "gameOver" in template.keys() %}
+        <h1>GAME OVER! Out Player: {{template["outPlayer"]}}</h1>
+     {% else %}
+        <h1>Round {{template["round"]}} Over! Out Player: {{template["outPlayer"]}}</h1>
+     {% endif %}
+    <div>
     {% for player in template["playerHands"] %}
         <h3>
         {{player["name"]}}&nbsp;        
@@ -11,6 +15,7 @@
         {% endfor %}
         </h3><br/>
     {% endfor %}
+    </div>
 </div>
 </body>
 </html>

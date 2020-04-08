@@ -150,33 +150,32 @@ class Game():
         del d
 
         self.gameOn = 1
-        self.__startNextRound()
+        self.dealer = self.playerOrder[0]
+        self.activePlayer = self.__nextPlayer(self.dealer)
+
+        self.startNextRound(self.dealer)
 
         return
 
-    def __startNextRound(self):
+    def startNextRound(self, dealerId):
         """
             starts a new round
         """
-        if self.round == 0:
-            self.dealer = self.playerOrder[0]
-            self.activePlayer = self.__nextPlayer(self.playerOrder[0])  # there must be at least one player to get this far ...
-        else:
-            self.dealer = self.__nextPlayer(self.dealer)
-            self.activePlayer = self.__nextPlayer(self.dealer)
+        if self.players[dealerId] == self.players[self.dealer]:  # only the dealer can call this method
+            self.roundOver = 0
             self.outPlayer = 0
 
-        self.round += 1   # do we to recognize the end of the game through this method??
+            self.round += 1   # do we to recognize the end of the game through this method??
 
-        # shuffle full deck, deal first discard, and deal to the players
-        self.__createInitialDeck()
-        for playerId, player in self.players.items():
-            player.hand.clear()
-            player.hasExtraCard = False
-            player.hasDiscarded = False
-            self.__moveCardsFromTop(self.deck, player.hand, 2 + self.round)
+            # shuffle full deck, deal first discard, and deal to the players
+            self.__createInitialDeck()
+            for playerId, player in self.players.items():
+                player.hand.clear()
+                player.hasExtraCard = False
+                player.hasDiscarded = False
+                self.__moveCardsFromTop(self.deck, player.hand, 2 + self.round)
 
-        return
+        return self.playerGameStatus(dealerId)
 
     def createGame(self, lstEmails, checkIns):
         """
@@ -275,31 +274,15 @@ class Game():
                 player.hasDiscarded = False
 
                 player.outhand = eval(outHand)  # this is the players hand in their ordering when then went out
-                print("Player's OUTHAND\n{}: ".format(player.outhand))
+                # print("Player's OUTHAND\n{}: ".format(player.outhand))
 
                 if self.activePlayer == self.outPlayer:  # start a new round!
-                    if self.round == 2:  # testing here
-                        print("--- GAME IS OVER AFTER ROUND: {} ---".format(self.round))
+                    self.roundOver = 1
+                    if self.round == 3:  # testing here. production value == 11
                         self.gameOver = 1
-                        sys.exit(0)
                     else:
                         print("START OF ROUND:{}".format(self.round + 1))
-                        self.roundOver = 1
-                        #self.__startNextRound()  need a UI to launch next round
-                #
-                #
-                #
-                # """
-                #     need to do something here to determine when the next player
-                #     is once again the outPlayer, as that would end the round.
-                #     Additionally, once round > 11 we end the game.  Should
-                #     email round scores to everyone after game.  Need to write
-                #     clear rules for the client in terms of "out" e.g. once outPlayer
-                #     is set, then "pass" is no longer enabled on the client, only "out"
-                # """
-                # self.activePlayer = self.__nextPlayer(self.activePlayer)
-                # player.hasDiscarded = False
-                # # set player's score for this round to 0
+                        self.dealer = self.__nextPlayer(self.dealer)  # need to set the dealer before the next round starts
 
         return self.playerGameStatus(playerId)
 
@@ -310,12 +293,17 @@ class Game():
         d = dict()
 
         if self.roundOver == 1:
-            d["roundOver"] = 1
+            d["roundOver"] = self.roundOver
+            if self.gameOver == 1:
+                d["gameOver"] = self.gameOver
+            d["name"] = self.players[playerId].name
             d["round"] = self.round
             d["outPlayer"] = self.players[self.outPlayer].name
+            d["dealer"] = self.players[self.dealer].name
             lstPlayers = list()
-            for playerId in self.players.keys():
+            for playerId in self.playerOrder:
                 dPlayer = dict(name=self.players[playerId].name, outHand=json.dumps(self.players[playerId].outhand))
+                # print("playerId: {} dPlayer: {}".format(playerId, dPlayer))
                 lstPlayers.append(dPlayer)
             d["playerHands"] = json.dumps(lstPlayers)
             d["discard"] = json.dumps(dict(suit=0, value=0), cls=Encoder)
@@ -351,6 +339,14 @@ class Game():
                     d["score"] = player.score
 
         return json.dumps(d)
+
+    def endGame(self):
+        s = "something went wrong"
+        if self.endGame == 1:
+            s = "--- GAME IS OVER AFTER ROUND: {} ---".format(self.round)
+            print(s)
+
+        return json.dumps(s)
 
     def peakIds(self):
         """

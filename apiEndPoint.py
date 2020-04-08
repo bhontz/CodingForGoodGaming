@@ -49,11 +49,6 @@ def createGame():
 
     return status
 
-@api.route("/peakIds", methods=['GET'])
-def peakIds():
-    return thisGame.peakIds()
-
-
 """
     API methods for client PLAYER:
     playerReady: executing the URL emailed from the Game, indication that player is ready to play [POST playerID, playername]
@@ -151,14 +146,24 @@ def playerOut():
 
     return s
 
+@api.route('/nextround', methods=['GET'])
+def nextRound():
+    id = request.args.get('id', default=-1, type=int)
 
-# @api.route('/showDiscard', methods=['GET'])
-# def showDiscard():
-#     return thisGame.showDiscard()
-#
-# @api.route('/randomCard', methods=['GET'])
-# def get_random_card():
-#     return thisGame.randomCardFromDeck()
+    s = "nextround error"
+    if id != -1:
+        s = thisGame.startNextRound(id)
+
+    return s
+
+@api.route('/endGame', methods=['GET'])
+def endGame():
+    return thisGame.endGame()
+
+@api.route('/peakIds', methods=['GET'])
+def peakIds():
+    return thisGame.peakIds()
+
 
 if __name__ == '__main__':
     api.run(debug=True, host='192.168.100.35', port=5000)

@@ -1,12 +1,11 @@
 from PyQt5.QtWidgets import (QLabel, QScrollArea, QDesktopWidget, QPushButton, QDialog, QVBoxLayout, QGridLayout, QGroupBox, QApplication, QLineEdit, QHBoxLayout)
-from PyQt5.QtGui import QPixmap, QDrag, QPainter, QIcon
+from PyQt5.QtGui import QPixmap, QDrag, QPainter
 from PyQt5.QtCore import QMimeData, Qt
 from PyQt5 import QtCore
 import os, sys, time, itertools, functools, json, requests
 from urllib.parse import quote
-from flask import Flask, render_template_string
-from FiveCrownsGame import Card
 from FiveCrownsPlayer import Player
+from flask import Flask, render_template_string
 
 theURL = "http://192.168.100.35:5000/" # "http://localhost:5000/" # "http://192.168.100.35:5000/"
 
@@ -35,7 +34,7 @@ class GlobalObject(QtCore.QObject):
     def receiveResponse(self, jsonResponse):
         if jsonResponse:
             self.dictResponse = eval(jsonResponse.content)
-            print("FROM SERVER:\n {}".format(self.dictResponse))
+            print("FROM SERVER:\n{}".format(self.dictResponse))
             self.__updateThisPlayer()
 
             self.playerMessage()
@@ -71,6 +70,8 @@ class GlobalObject(QtCore.QObject):
     def updateHand(self):
         if "activePlayer" in self.dictResponse.keys() and self.thisPlayer.name == self.dictResponse["activePlayer"]:
             self.dispatchEvent("updateHand")
+        elif "roundOver" in self.dictResponse.keys():
+            self.dispatchEvent("outHand")
         return
 
     def getPlayerId(self):
@@ -89,6 +90,69 @@ class GlobalObject(QtCore.QObject):
         if "activePlayer" in self.dictResponse.keys() and self.thisPlayer.name == self.dictResponse["activePlayer"]:
             self.thisPlayer.hasExtraCard = self.dictResponse["hasExtraCard"]
             self.thisPlayer.hasDiscarded = self.dictResponse["hasDiscarded"]
+
+class EndGame(QDialog):
+    """
+        quit
+    """
+    def __init__(self):
+        super().__init__()
+        self.gObj = GlobalObject()
+        self.initUI()
+
+    def initUI(self):
+        dlgMsg = QLabel(self)
+        dlgMsg.setText("Thanks for playing {}!".format(self.gObj.thisPlayer.name))
+
+        btnNextRound = QPushButton("Close")
+        btnNextRound.clicked.connect(self.endItAll)
+        vBox = QVBoxLayout()
+        vBox.addStretch(1)
+        vBox.addWidget(dlgMsg, 10)
+        vBox.addWidget(btnNextRound, 90)
+        self.setLayout(vBox)
+
+        self.setGeometry(0, 0, 225, 155)  # put this in the corner so you can scroll main window
+        self.setWindowTitle("GAME OVER")
+        self.show()
+
+    def endItAll(self, event):
+        # strMsg = "{}endGame".format(self.gObj.getServerURL())
+        # requests.get(strMsg)  # there is no response to this server message
+        self.gObj.dispatchEvent("kamikazi")
+        self.close()
+
+class Dealer(QDialog):
+    """
+        exposed to dealer to start the next round
+    """
+    def __init__(self):
+        super().__init__()
+        self.gObj = GlobalObject()
+        self.initUI()
+
+    def initUI(self):
+        dlgMsg = QLabel(self)
+        dlgMsg.setText("Review hands, then click to start the next round".format(self.gObj.thisPlayer.name))
+
+        btnNextRound = QPushButton("Start Round {}".format(self.gObj.dictResponse["round"] + 1))
+        btnNextRound.clicked.connect(self.startNextRound)
+        vBox = QVBoxLayout()
+        vBox.addStretch(1)
+        vBox.addWidget(dlgMsg, 10)
+        vBox.addWidget(btnNextRound, 90)
+        self.setLayout(vBox)
+
+        self.setGeometry(0, 0, 200, 150)  # put this in the corner so you can scroll main window
+        self.setWindowTitle("You\'re the Dealer")
+        self.show()
+
+    def startNextRound(self, event):
+        strMsg = "{}nextround?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
+        self.gObj.receiveResponse(requests.get(strMsg))
+        self.close()
+        self = None
+
 
 class PlayerPass(QDialog):
     def __init__(self):
@@ -143,7 +207,7 @@ class PlayerPass(QDialog):
             when a player goes out, we send his local hand back to the server via player.outhand
         """
         strMsg = "{}out?id={}&outhand={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId(), json.dumps(self.gObj.thisPlayer.outhand))
-        print("UI-clickedOut\n{}".format(strMsg))
+        # print("UI-clickedOut\n{}".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
         self.close()
 
@@ -245,7 +309,7 @@ class PlayerCheckIn(QDialog):
 
     def __playerCheckIn(self):
         strCheckIn = "{}&name={}".format(self.playerURL.text().strip(), quote(self.playerName.text()))
-        print("FROM Dialog PlayerCheckIn - just checked In as: {}".format(strCheckIn))
+        print("DIALOG PlayerCheckIn:\n{} just checked In".format(strCheckIn))
         response = requests.get(strCheckIn)
         # in this case, we're going to pull the id right away so we can create the GlobalObject thisPlayer
         if response:
@@ -355,8 +419,8 @@ class App(QDialog):
         self.title = 'Fivecrowns Player UI'
         # self.left = 10
         # self.top = 10
-        self.width = 1200 #800
-        self.height = 800 #600
+        self.width = 1200
+        self.height = 800
         self.handGroupBox = QGroupBox("Player Hand:")
         self.gridHand = QGridLayout()
         self.msgText = QLabel()
@@ -369,6 +433,7 @@ class App(QDialog):
         self.gObj.addEventListener("showDiscard", self.__showDiscard)
         self.gObj.addEventListener("updateHand", self.__playerHand)
         self.gObj.addEventListener("outHand", self.__outHand)
+        self.gObj.addEventListener("kamikazi", self.__endGame)
         self.flaskApp = Flask(self.title)
 
         dlg = PlayerCheckIn()  # present at app launch
@@ -411,7 +476,7 @@ class App(QDialog):
         msgGrid.addWidget(scrollArea)
         # msgGrid.addWidget(self.msgText)
         self.grpMessage.setLayout(msgGrid)
-        self.hzMsgDiscard.addWidget(self.grpMessage, 80)
+        self.hzMsgDiscard.addWidget(self.grpMessage, 90)
 
         self.vrtSubmitDiscard = QVBoxLayout()
         self.vrtSubmitDiscard.setObjectName("vrtSubmitDiscard")
@@ -429,7 +494,7 @@ class App(QDialog):
         discardGrid.addWidget(self.discardCardIcon)
         self.grpDiscard.setLayout(discardGrid)
         self.vrtSubmitDiscard.addWidget(self.grpDiscard)
-        self.hzMsgDiscard.addLayout(self.vrtSubmitDiscard, 20)
+        self.hzMsgDiscard.addLayout(self.vrtSubmitDiscard, 10)
         self.vrtMain.addLayout(self.hzMsgDiscard, 40)
 
         grpHand = QGroupBox("Player Hand:")
@@ -456,38 +521,48 @@ class App(QDialog):
         """
             Updates the message box
         """
-        msg = "<html><body><h1>Welcome to Five Crowns!</h1></body></html>"
-        dMsg = {}
         if self.gObj.dictResponse:
+            dMsg = {}
             d = self.gObj.dictResponse
             if "roundOver" in d.keys():
                 for k, v in d.items():
                     if k == "playerHands":
+                        lstPlayers = json.loads(v)
                         lstInner = []
-                        lstPlayers = eval(v)
                         for p in lstPlayers:
                             dInner = {}
                             dInner["name"] = p["name"]
                             dInner["outHand"] = eval(p["outHand"])
-                        lstInner.append(dInner)
+                            lstInner.append(dInner)
                         dMsg["playerHands"] = lstInner
                     else:
                         dMsg[k] = v
-
                 msg = self.__htmlMessage("roundOver.html", dMsg)
-                print("dMsg:{}".format(dMsg))
+                self.msgText.setText(msg)  # don't move this below the if/then/else tree
+
+                if "gameOver" in d.keys():
+                    dlg = EndGame()  # kill it off
+                    if not dlg.exec_():
+                        pass
+
+                elif "name" in d.keys() and "dealer" in d.keys():
+                    if d["name"] == d["dealer"]:
+                        dlg = Dealer()  # present the ability to advance round to the dealer
+                        if not dlg.exec_():
+                            pass
 
             elif not d["round"]:
                 left = d["startGameAfterCheckIns"] - d["checkIns"]
                 dMsg = dict(name=d["name"], left=left)
                 msg = self.__htmlMessage("checkedIn.html", dMsg)
-                del dMsg
 
             else:
                 msg = self.__htmlMessage("playerStatus.html", d)
+                self.msgText.setText(msg)
 
-        del dMsg
-        self.msgText.setText(msg)
+        else:  # checked in player waiting on start of game
+            msg = "<html><body><h1>Welcome to Five Crowns!</h1></body></html>"
+            self.msgText.setText(msg)
 
         return
 
@@ -509,7 +584,7 @@ class App(QDialog):
 
         if self.gObj.dictResponse:
             serverHand = eval(self.gObj.dictResponse["hand"])
-            # print("HAND:\n server:{} local:{}".format(serverHand, self.cardArray))
+            # print("HAND:\nserver:{} local:{}".format(serverHand, self.cardArray))
             if len(serverHand) > len(self.cardArray):
                 inServerNotLocal = list(itertools.filterfalse(lambda i: i in self.cardArray, serverHand))
                 self.cardArray.extend(inServerNotLocal)
@@ -569,7 +644,7 @@ class App(QDialog):
     @QtCore.pyqtSlot()
     def __outHand(self):
         """
-            called when a player goes out, used to need to clear their local hand
+           clear the local hand when a new round begins
         """
         self.cardArray = []
         self.cardIcons = []
@@ -598,6 +673,11 @@ class App(QDialog):
         self.__reorderHand()
 
         return
+
+    @QtCore.pyqtSlot()
+    def __endGame(self):
+        self.close()
+        sys.exit(0)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

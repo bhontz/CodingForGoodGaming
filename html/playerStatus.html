@@ -2,7 +2,8 @@
 <html><body>
 <style>body{background-color:#ffffff;font-size:100%;}</style>
 <div id="main">
-    <h2>Round:&nbsp; {{template["round"]}}</h2>
+    {% set wildcard = template["round"] + 2 %}
+    <h3>Round:&nbsp; {{template["round"]}}&nbsp;&nbsp; You get:&nbsp; {{wildcard}} cards</h3>
     {% if "outPlayer" in template.keys() %}
         <h1>Player:{{template["outPlayer"]}} is OUT!</h1>
         <h1>Last Round for: {{template["activePlayer"]}}</h1>

@@ -1,8 +1,4 @@
-import os, sys, requests, json, random, time
-from enum import Enum
-from json import JSONEncoder
-from datetime import datetime
-from FiveCrownsGame import *
+import os, sys
 
 class Player():
     def __init__(self, name, uid):
@@ -22,6 +18,3 @@ class Player():
         del self.score
         del self
         return
-
-    # def getId(self):
-    #     return self.id
