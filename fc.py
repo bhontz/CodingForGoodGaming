@@ -623,22 +623,22 @@ class App(QDialog):
         """
             entire local hand is reordered when user drops a card in a new location
         """
+        if self.cardIcons:
+            for destIdx, card in enumerate(self.cardIcons):
+                card = card.exposeCard()
+                if card != self.cardArray[destIdx]:
+                    break
 
-        for destIdx, card in enumerate(self.cardIcons):
-            card = card.exposeCard()
-            if card != self.cardArray[destIdx]:
-                break
+            sourceIdx = self.cardArray.index(card)
+            # print("destIdx:{} sourceIdx:{} sourceCard:{}".format(destIdx, sourceIdx, card))
+            card = self.cardArray.pop(sourceIdx)
+            self.cardArray.insert(destIdx, card)
 
-        sourceIdx = self.cardArray.index(card)
-        # print("destIdx:{} sourceIdx:{} sourceCard:{}".format(destIdx, sourceIdx, card))
-        card = self.cardArray.pop(sourceIdx)
-        self.cardArray.insert(destIdx, card)
+            for i, card in enumerate(self.cardIcons):   # update all cards and local deck
+                card.updateImage(json.dumps(self.cardArray[i]))
+            # print("after: {}".format(self.cardArray))
 
-        for i, card in enumerate(self.cardIcons):   # update all cards and local deck
-            card.updateImage(json.dumps(self.cardArray[i]))
-        # print("after: {}".format(self.cardArray))
-
-        self.gObj.thisPlayer.outhand = list(self.cardArray) # keep the local hand ordering here for when the player goes out
+            self.gObj.thisPlayer.outhand = list(self.cardArray) # keep the local hand ordering here for when the player goes out
 
         return
 

@@ -13,7 +13,9 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-04-04
+Summary of functionality through 2020-04-09
+
+    + functional now, albeit without scoring or book / run tagging
     
     + UI messaging, dealing and discard completed (need to debug the later two)
     

@@ -31,7 +31,8 @@ class Card():
         return False
 
     def printCard(self):
-        print("deck:{} suit:{} value:{}".format(self.deck, self.suit, self.value))
+        self.log("deck:{} suit:{} value:{}".format(self.deck, self.suit, self.value))
+        # print("deck:{} suit:{} value:{}".format(self.deck, self.suit, self.value))
         return
 
 class Encoder(JSONEncoder):
@@ -91,6 +92,15 @@ class Game():
         self.roundOver = 0
         self.gameOver = 0
         return
+
+    def log(self, msg):  # simple wrapper for logging to stdout on heroku
+        try:
+            if type(msg) is dict:
+                msg = json.dumps(msg)
+            sys.stdout.write(u"\t--fc-->{}: {}\n".format(time.strftime("%H:%M:%S", time.localtime()), msg))
+        except UnicodeEncodeError:
+            pass  # squash logging errors in case of non-ascii text
+        sys.stdout.flush()
 
         return
 
@@ -312,6 +322,7 @@ class Game():
                 player.hasDiscarded = False  # reset
                 player.outhand = eval(outHand)  # this is the players hand in their ordering when then went out]
                 player.hand.clear()
+                # self.log("Player's OUTHAND\n{}: ".format(player.outhand))
                 # print("Player's OUTHAND\n{}: ".format(player.outhand))
 
                 self.activePlayer = self.__nextPlayer(self.activePlayer)
@@ -321,7 +332,8 @@ class Game():
                     if self.round == 11:  # testing here. production value == 11
                         self.gameOver = 1
                     else:
-                        print("START OF ROUND:{}".format(self.round + 1))
+                        self.log("START OF ROUND:{}".format(self.round + 1))
+                        # print("START OF ROUND:{}".format(self.round + 1))
                         self.dealer = self.__nextPlayer(self.dealer)  # need to set the dealer before the next round starts
 
         return self.playerGameStatus(playerId)
