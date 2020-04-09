@@ -1,7 +1,6 @@
-import os, sys, requests, json, random, time
+import os, sys, json, random, time
 from enum import Enum
 from json import JSONEncoder
-from datetime import datetime
 from FiveCrownsPlayer import Player
 
 class CardSuit(Enum):
@@ -13,7 +12,8 @@ class CardSuit(Enum):
     BLACKJOKER = 6
 
 class Card():
-    def __init__(self, suit, value):
+    def __init__(self, deck, suit, value):
+        self.deck = deck    # found I needed this to ID card duplication
         self.suit = suit
         self.value = value
         return
@@ -22,7 +22,7 @@ class Card():
         del self
         return
 
-    def __eq__(self, other):  # support equivalence testing
+    def __eq__(self, other):  # support equivalence testing for Card comparisons
         if isinstance(other, Card):
             bools = (self.suit == other.suit)
             boolv = (self.value == other.value)
@@ -31,7 +31,7 @@ class Card():
         return False
 
     def printCard(self):
-        print("suit:{} value:{}".format(self.suit, self.value))
+        print("deck:{} suit:{} value:{}".format(self.deck, self.suit, self.value))
         return
 
 class Encoder(JSONEncoder):
@@ -40,6 +40,7 @@ class Encoder(JSONEncoder):
 
 class Game():
     def __init__(self):
+        self.startDateTime = time.localtime()
         self.players = {} # of Player
         self.playerOrder = [] # dealer ordering
         self.deck = []  # of Card
@@ -52,24 +53,80 @@ class Game():
         self.startGameAfterCheckIns = 0
         self.roundOver = 0
         self.gameOver = 0
-        self.__createInitialDeck()
+        # self.__createInitialDeck()
 
         return
 
     def __del__(self):
+        del self.players
+        del self.playerOrder
+        del self.deck
+        del self.discard
         return
+
+    def __wipeOut(self):
+        self.players.clear()
+        del self.players
+        self.players = None
+        self.playerOrder.clear()
+        del self.playerOrder
+        self.playerOrder = None
+        self.deck.clear()
+        del self.deck
+        self.deck = None
+        self.discard.clear()
+        del self.discard
+        self.discard = None
+
+        self.players = {}  # of Player
+        self.playerOrder = []  # dealer ordering
+        self.deck = []  # of Card
+        self.discard = []  # of Card
+        self.dealer = 0
+        self.activePlayer = 0
+        self.outPlayer = 0
+        self.round = 0
+        self.checkIns = 0
+        self.startGameAfterCheckIns = 0
+        self.roundOver = 0
+        self.gameOver = 0
+        return
+
+        return
+
+    def createGame(self, lstEmails, checkIns):
+        """
+            create the new players listed players and assign their id.
+            send players an email with their URL endpoint for check-in.
+            game loop starts when the Game.checkIns == startAfterCheckIns.
+            (note: "un-deal" players that did not check in and then delete these players at Game Start)
+        """
+        self.__createInitialDeck()  # moved here from __init__
+        self.startDateTime = time.localtime()
+        dMsg = {"message": "New Game Started at: {}  Invited {} players by email.  Waiting for {} players to check in".format(time.strftime("%H:%M:%S", self.startDateTime), len(lstEmails), checkIns)}
+
+        if not checkIns or checkIns > len(lstEmails):
+            checkIns = len(lstEmails)
+
+        self.startGameAfterCheckIns = checkIns
+
+        for p in lstEmails:
+            playerId = self.__addPlayer()
+            # self.__invitePlayer(p, "http://localhost:5000", playerId)
+
+        return json.dumps(dMsg)
 
     def __createInitialDeck(self):
         """
             create two standard card decks that include 2 jokers but exclude 2s and aces
         """
         self.deck.clear()
-        for i in range(0, 2):
-            self.deck.append(Card(CardSuit.REDJOKER.value, 0))  # add the two black jokers
-            self.deck.append(Card(CardSuit.BLACKJOKER.value, 0))
+        for deckId in range(0, 2):  # two decks
+            self.deck.append(Card(deckId, CardSuit.REDJOKER.value, 0))  # add the two black jokers
+            self.deck.append(Card(deckId, CardSuit.BLACKJOKER.value, 0))
             for value in range(3, 14):
                 for suit in range(1, 5):  # len CardSuit + 1
-                    self.deck.append(Card(suit, value))
+                    self.deck.append(Card(deckId, suit, value))
 
         # now shuffle deck and deal initial discard
         for i in range(0, random.randint(1, 7)):  # i wasn't happy with the shuffle in practice
@@ -177,25 +234,7 @@ class Game():
 
         return self.playerGameStatus(dealerId)
 
-    def createGame(self, lstEmails, checkIns):
-        """
-            create the new players listed players and assign their id.
-            send players an email with their URL endpoint for check-in.
-            game loop starts when the Game.checkIns == startAfterCheckIns.
-            (note: "un-deal" players that did not check in and then delete these players at Game Start)
-        """
-        d = {"message": "New Game Started.  Inviting {} players by email.  Waiting for {} players to check in".format(len(lstEmails), checkIns)}
 
-        if not checkIns or checkIns > len(lstEmails):
-            checkIns = len(lstEmails)
-
-        self.startGameAfterCheckIns = checkIns
-
-        for p in lstEmails:
-            playerId = self.__addPlayer()
-            # self.__invitePlayer(p, "http://localhost:5000", playerId)
-
-        return json.dumps(d)
 
     def playerCheckIn(self, playerId, name):
         """
@@ -244,7 +283,7 @@ class Game():
         if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
             d = eval(json.loads(cardJSON))
-            playerDiscard = Card(d["suit"], d["value"])
+            playerDiscard = Card(d["deck"], d["suit"], d["value"])
 
             if playerDiscard in player.hand and len(player.hand) > (2 + self.round):
                 player.hand.remove(playerDiscard)  # doesn't matter if there are multiple playerDiscard cards in hand
@@ -270,15 +309,16 @@ class Game():
                 if not self.outPlayer:   # outPlayer is the first one out
                     self.outPlayer = playerId
 
-                self.activePlayer = self.__nextPlayer(self.activePlayer)
-                player.hasDiscarded = False
-
-                player.outhand = eval(outHand)  # this is the players hand in their ordering when then went out
+                player.hasDiscarded = False  # reset
+                player.outhand = eval(outHand)  # this is the players hand in their ordering when then went out]
+                player.hand.clear()
                 # print("Player's OUTHAND\n{}: ".format(player.outhand))
+
+                self.activePlayer = self.__nextPlayer(self.activePlayer)
 
                 if self.activePlayer == self.outPlayer:  # start a new round!
                     self.roundOver = 1
-                    if self.round == 3:  # testing here. production value == 11
+                    if self.round == 11:  # testing here. production value == 11
                         self.gameOver = 1
                     else:
                         print("START OF ROUND:{}".format(self.round + 1))
@@ -341,10 +381,8 @@ class Game():
         return json.dumps(d)
 
     def endGame(self):
-        s = "something went wrong"
-        if self.endGame == 1:
-            s = "--- GAME IS OVER AFTER ROUND: {} ---".format(self.round)
-            print(s)
+        s = "Ending Game Started: {}".format(time.strftime("%H:%M:%S", self.startDateTime))
+        self.__wipeOut()
 
         return json.dumps(s)
 

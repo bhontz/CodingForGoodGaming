@@ -5,7 +5,7 @@
     {% set wildcard = template["round"] + 2 %}
     <h3>Round:&nbsp; {{template["round"]}}&nbsp;&nbsp; You get:&nbsp; {{wildcard}} cards</h3>
     {% if "outPlayer" in template.keys() %}
-        <h1>Player:{{template["outPlayer"]}} is OUT!</h1>
+        <h1>Player: {{template["outPlayer"]}} is OUT!</h1>
         <h1>Last Round for: {{template["activePlayer"]}}</h1>
         {% if template["nextPlayer"] != template["outPlayer"] %}
             <h2>Next Player: {{template["nextPlayer"]}}</h2>
