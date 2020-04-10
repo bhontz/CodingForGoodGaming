@@ -54,8 +54,7 @@ class Game():
         self.startGameAfterCheckIns = 0
         self.roundOver = 0
         self.gameOver = 0
-        # self.__createInitialDeck()
-
+        self.URL = None
         return
 
     def __del__(self):
@@ -63,6 +62,21 @@ class Game():
         del self.playerOrder
         del self.deck
         del self.discard
+        return
+
+    def log(self, msg):  # simple wrapper for logging to stdout on heroku
+        try:
+            if type(msg) is dict:
+                msg = json.dumps(msg)
+            sys.stdout.write(u"\t--fc-->{}: {}\n".format(time.strftime("%H:%M:%S", time.localtime()), msg))
+        except UnicodeEncodeError:
+            pass  # squash logging errors in case of non-ascii text
+        sys.stdout.flush()
+
+        return
+
+    def setURL(self, url):
+        self.URL = url
         return
 
     def __wipeOut(self):
@@ -93,16 +107,7 @@ class Game():
         self.gameOver = 0
         return
 
-    def log(self, msg):  # simple wrapper for logging to stdout on heroku
-        try:
-            if type(msg) is dict:
-                msg = json.dumps(msg)
-            sys.stdout.write(u"\t--fc-->{}: {}\n".format(time.strftime("%H:%M:%S", time.localtime()), msg))
-        except UnicodeEncodeError:
-            pass  # squash logging errors in case of non-ascii text
-        sys.stdout.flush()
 
-        return
 
     def createGame(self, lstEmails, checkIns):
         """

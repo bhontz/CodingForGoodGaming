@@ -7,7 +7,8 @@ from urllib.parse import quote
 from flask import Flask, render_template_string
 from FiveCrownsPlayer import Player
 
-theURL = "http://192.168.100.35:5000/" # "http://localhost:5000/" # "http://192.168.100.35:5000/"
+# used during development, obsolete
+# theURL = "http://localhost:5000/" "http://e90fecd0.ngrok.io/"  #"http://192.168.100.35:5000/" # "http://localhost:5000/"
 
 @functools.lru_cache()
 class GlobalObject(QtCore.QObject):
@@ -17,6 +18,7 @@ class GlobalObject(QtCore.QObject):
     def __init__(self):
         super().__init__()
         self._events = {}
+        self.gameURL = None
         self.thisPlayer = None
         self.dictResponse = None
 
@@ -81,7 +83,7 @@ class GlobalObject(QtCore.QObject):
         """
             TODO: need to get this from somewhere
         """
-        return theURL
+        return self.gameURL
 
     def __updateThisPlayer(self):
         """
@@ -294,12 +296,12 @@ class PlayerCheckIn(QDialog):
         vbox.addWidget(nameLabel, 1)
         vbox.addWidget(self.playerName)
         vbox.addLayout(hbox)
-
         self.setLayout(vbox)
 
         self.resize(500, 150)
         self.__centerOnScreen()
         self.setWindowTitle('Player Check In')
+
         self.show()
 
     def __centerOnScreen(self):
@@ -309,7 +311,13 @@ class PlayerCheckIn(QDialog):
         self.move(qr.topLeft())
 
     def __playerCheckIn(self):
-        strCheckIn = "{}&name={}".format(self.playerURL.text().strip(), quote(self.playerName.text()))
+        # load up the URL we came from
+        s = self.playerURL.text().strip()
+        n = s.find("playerReady")
+        self.gObj.gameURL = s[:n]
+        print("s:{} n:{} gameURL:{}".format(s, n, self.gObj.gameURL))
+
+        strCheckIn = "{}&name={}".format(s, quote(self.playerName.text()))
         print("DIALOG PlayerCheckIn:\n{} just checked In".format(strCheckIn))
         response = requests.get(strCheckIn)
         # in this case, we're going to pull the id right away so we can create the GlobalObject thisPlayer
