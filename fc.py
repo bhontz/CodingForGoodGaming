@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (QLabel, QScrollArea, QDesktopWidget, QPushButton, QDialog, QVBoxLayout, QGridLayout, QGroupBox, QApplication, QLineEdit, QHBoxLayout)
 from PyQt5.QtGui import QPixmap, QDrag, QPainter
-from PyQt5.QtCore import QMimeData, Qt
+from PyQt5.QtCore import QMimeData, Qt, QSize
 from PyQt5 import QtCore
 import os, sys, time, itertools, functools, json, requests
 from urllib.parse import quote
@@ -475,15 +475,18 @@ class App(QDialog):
         self.grpMessage.setTitle("Message:")
         # self.msgText = QLabel()
         self.msgText.setTextFormat(Qt.RichText)
-        self.msgText.setMinimumSize(800,800)
+        self.msgText.setMinimumSize(800,1200) # was 800, 800
         self.__playerMessage()
         scrollArea = QScrollArea()
+        scrollArea.setWidgetResizable(True)
         scrollArea.setWidget(self.msgText)
         scrollArea.ensureWidgetVisible(self.msgText)
+        scrollArea.setAlignment(Qt.AlignTop)
+
         msgGrid = QGridLayout()
         msgGrid.addWidget(scrollArea)
-        # msgGrid.addWidget(self.msgText)
         self.grpMessage.setLayout(msgGrid)
+
         self.hzMsgDiscard.addWidget(self.grpMessage, 90)
 
         self.vrtSubmitDiscard = QVBoxLayout()
