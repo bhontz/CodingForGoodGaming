@@ -27,4 +27,21 @@ Summary of functionality through 2020-04-09
     
     + initial commit with skeletal barebones ability to serve via localhost
 
+#### To-Dos
+
+    + ability to rearrange cards after going out (between rounds)
+    
+    + bug: cards at the beginning of a new round are bogus until you draw
+    
+    + non-modal dialogs should stay on top
+    
+    + ability to restart the game at any round number
+    
+    + ability to rejoin the game and retain your (server) hand
+    
+    + automate invite game starting process (so others can execute)
+    
+    + redo server to Flash's API template
+    
+
 
