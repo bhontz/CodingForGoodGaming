@@ -9,7 +9,9 @@ from FiveCrownsGame import Game
 
 app = Flask(__name__)
 # app.config["thisGame"] = Game()
-# thisGame = Game()
+thisGame = Game()
+
+# need to edit replace: app.config.get("thisGame") with thisGame
 
 """
     API methods for client GAME INITIALIZATION:
@@ -30,12 +32,12 @@ app = Flask(__name__)
 def createGame():
     status = "nothing happened"
 
-    #param = request.form["data"]
-    param = request.form.get("data")
+    param = request.form["data"]
+    # param = request.form.get("data")
     if param:
         obj = json.loads(param)
         if obj['invite']:
-            status = app.config.get("thisGame").createGame(obj['invite'], obj['startGameAfter'])
+            status = thisGame.createGame(obj['invite'], obj['startGameAfter'])
 
     return status
 
@@ -72,7 +74,7 @@ def playerCheckIn():
     s = "playerReady error"
 
     if id != -1:
-        s = app.config.get("thisGame").playerCheckIn(id, name)
+        s = thisGame.playerCheckIn(id, name)
 
     return s
 
@@ -83,7 +85,7 @@ def playerStatus():
 
     s = "playerStatus error"
     if id != -1:
-        s = app.config.get("thisGame").playerGameStatus(id)
+        s = thisGame.playerGameStatus(id)
 
     return s
 
@@ -94,7 +96,7 @@ def pickDeck():
 
     s = "pickDeck error"
     if id != -1:
-        s = app.config.get("thisGame").pickFromDeck(id)
+        s = thisGame.pickFromDeck(id)
 
     return s
 
@@ -105,7 +107,7 @@ def pickDiscard():
 
     s = "pickDiscard error"
     if id != -1:
-        s = app.config.get("thisGame").pickFromDiscard(id)
+        s = thisGame.pickFromDiscard(id)
 
     return s
 
@@ -117,7 +119,7 @@ def discard():
 
     s = "discard error"
     if id != -1 and cardJSON != "{}":
-        s = app.config.get("thisGame").playerDiscard(id, cardJSON)
+        s = thisGame.playerDiscard(id, cardJSON)
 
     return s
 
@@ -128,7 +130,7 @@ def playerPass():
 
     s = "pass error"
     if id != -1:
-        s = app.config.get("thisGame").playerPass(id)
+        s = thisGame.playerPass(id)
 
     return s
 
@@ -140,7 +142,7 @@ def playerOut():
 
     s = "out error"
     if id != -1:
-        s = app.config.get("thisGame").playerOut(id, outhand)
+        s = thisGame.playerOut(id, outhand)
 
     return s
 
@@ -151,22 +153,21 @@ def nextRound():
 
     s = "nextround error"
     if id != -1:
-        s = app.config.get("thisGame").startNextRound(id)
+        s = thisGame.startNextRound(id)
 
     return s
 
 
 @app.route('/endGame', methods=['GET'])
 def endGame():
-    return app.config.get("thisGame").endGame()
+    return thisGame.endGame()
 
 
 @app.route('/peakIds', methods=['GET'])
 def peakIds():
-    return app.config.get("thisGame").peakIds()
+    return thisGame.peakIds()
 
 if __name__ == '__main__':
-    app.config["thisGame"] = Game()
-    # thisGame = Game()
-    # app.run(debug=True, port=5000)
-    app.run(debug=True, host='192.168.100.35', port=5000)
+    # app.config["thisGame"] = Game()
+    app.run(debug=True, port=8080)
+    #app.run(debug=True, host='192.168.100.35', port=5000)
