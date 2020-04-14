@@ -107,8 +107,6 @@ class Game():
         self.gameOver = 0
         return
 
-
-
     def createGame(self, lstEmails, checkIns):
         """
             create the new players listed players and assign their id.
@@ -125,7 +123,7 @@ class Game():
 
         self.startGameAfterCheckIns = checkIns
 
-        for p in lstEmails:
+        for p in lstEmails:   # this role might be better suited for a separate "launch the game server" app
             playerId = self.__addPlayer()
             # self.__invitePlayer(p, "http://localhost:5000", playerId)
 
@@ -152,7 +150,7 @@ class Game():
         return
 
     def __moveCardsFromTop(self, s, d, n):
-        # presumes [s]ource, [d]estination arguments are [Card]
+        # presumes [s]ource, [d]estination arguments are [Card], n = nbr Cards
         for i in range(0, n):
             d.append(s.pop(0))
 
@@ -204,6 +202,7 @@ class Game():
     def __invitePlayer(self, playerEmail, urlOfGame, playerId):
         """
             send an email to "email" containing the URL and checkin endpoint with their ID as a PUT argument
+            TODO: this role might be better suited for a seperate game launching app
         """
         return
 
@@ -236,8 +235,9 @@ class Game():
         if self.players[dealerId] == self.players[self.dealer]:  # only the dealer can call this method
             self.roundOver = 0
             self.outPlayer = 0
+            self.activePlayer = self.__nextPlayer(dealerId)  # added after Easter evening game
 
-            self.round += 1   # do we to recognize the end of the game through this method??
+            self.round += 1
 
             # shuffle full deck, deal first discard, and deal to the players
             self.__createInitialDeck()
@@ -248,8 +248,6 @@ class Game():
                 self.__moveCardsFromTop(self.deck, player.hand, 2 + self.round)
 
         return self.playerGameStatus(dealerId)
-
-
 
     def playerCheckIn(self, playerId, name):
         """
@@ -325,20 +323,18 @@ class Game():
                     self.outPlayer = playerId
 
                 player.hasDiscarded = False  # reset
-                player.outhand = eval(outHand)  # this is the players hand in their ordering when then went out]
+                player.outhand = eval(outHand)  # this is the players hand in their ordering when then went out
                 player.hand.clear()
                 # self.log("Player's OUTHAND\n{}: ".format(player.outhand))
-                # print("Player's OUTHAND\n{}: ".format(player.outhand))
 
                 self.activePlayer = self.__nextPlayer(self.activePlayer)
 
                 if self.activePlayer == self.outPlayer:  # start a new round!
                     self.roundOver = 1
-                    if self.round == 11:  # testing here. production value == 11
+                    if self.round == 11:  # Game ending value
                         self.gameOver = 1
                     else:
                         self.log("START OF ROUND:{}".format(self.round + 1))
-                        # print("START OF ROUND:{}".format(self.round + 1))
                         self.dealer = self.__nextPlayer(self.dealer)  # need to set the dealer before the next round starts
 
         return self.playerGameStatus(playerId)

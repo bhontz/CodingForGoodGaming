@@ -27,13 +27,9 @@ Summary of functionality through 2020-04-09
     
     + initial commit with skeletal barebones ability to serve via localhost
 
-#### To-Dos
+#### ACTIVE To-Dos
 
-    + ability to rearrange cards after going out (between rounds)
-    
-    + bug: cards at the beginning of a new round are bogus until you draw
-    
-    + non-modal dialogs should stay on top
+    + ability to rearrange cards just prior to going out
     
     + ability to restart the game at any round number
     
@@ -43,5 +39,10 @@ Summary of functionality through 2020-04-09
     
     + redo server to Flash's API template
     
+#### COMPLETED To-Dos    
+    
+    + non-modal dialogs should stay on top
 
+    + bug: cards at the beginning of a new round are bogus until you draw
 
+    + bug: dealer seems to be the active player after starting new round 

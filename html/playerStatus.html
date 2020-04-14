@@ -11,7 +11,11 @@
             <h2>Next Player: {{template["nextPlayer"]}}</h2>
         {% endif %}
     {% else %}
-        <h1>Active Player: {{template["activePlayer"]}}</h1>
+        {% if "hasExtraCard" in template.keys() and template["hasExtraCard"] == 1 and template["hasDiscarded"] == 0 %}
+            <h1>Active Player: {{template["activePlayer"]}} needs to DISCARD.</h1>        
+        {% else %}
+            <h1>Active Player: {{template["activePlayer"]}}</h1>
+        {% endif %}
         <h2>Next Player: {{template["nextPlayer"]}}</h2>
     {% endif %}
 </div>

@@ -30,7 +30,8 @@ app = Flask(__name__)
 def createGame():
     status = "nothing happened"
 
-    param = request.form["data"]
+    #param = request.form["data"]
+    param = request.form.get("data")
     if param:
         obj = json.loads(param)
         if obj['invite']:
@@ -164,9 +165,8 @@ def endGame():
 def peakIds():
     return app.config.get("thisGame").peakIds()
 
-
 if __name__ == '__main__':
     app.config["thisGame"] = Game()
     # thisGame = Game()
-    app.run(debug=True, port=5000)
-    # app.run(debug=True, host='192.168.100.35', port=5000)
+    # app.run(debug=True, port=5000)
+    app.run(debug=True, host='192.168.100.35', port=5000)

@@ -97,9 +97,11 @@ class EndGame(QDialog):
     """
         quit
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None, flags=Qt.WindowFlags()):
+        super().__init__(parent=parent, flags=flags)
         self.gObj = GlobalObject()
+        flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
         self.initUI()
 
     def initUI(self):
@@ -114,23 +116,30 @@ class EndGame(QDialog):
         vBox.addWidget(btnNextRound, 90)
         self.setLayout(vBox)
 
-        self.setGeometry(0, 0, 225, 155)  # put this in the corner so you can scroll main window
+        self.resize(225, 155)
+        self.__centerOnScreen()
         self.setWindowTitle("GAME OVER")
         self.show()
 
+    def __centerOnScreen(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
     def endItAll(self, event):
-        # strMsg = "{}endGame".format(self.gObj.getServerURL())
-        # requests.get(strMsg)  # there is no response to this server message
         self.gObj.dispatchEvent("kamikazi")
         self.close()
 
 class Dealer(QDialog):
     """
-        exposed to dealer to start the next round
+        exposed ONLY TO THE DEALER at the start the next round
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None, flags=Qt.WindowFlags()):
+        super().__init__(parent=parent, flags=flags)
         self.gObj = GlobalObject()
+        flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
         self.initUI()
 
     def initUI(self):
@@ -145,20 +154,31 @@ class Dealer(QDialog):
         vBox.addWidget(btnNextRound, 90)
         self.setLayout(vBox)
 
-        self.setGeometry(0, 0, 200, 150)  # put this in the corner so you can scroll main window
+        # self.setGeometry(0, 0, 200, 150)  # put this in the corner so you can scroll main window
+        self.resize(200, 150)
+        self.__centerOnScreen()
         self.setWindowTitle("You\'re the Dealer")
         self.show()
 
+    def __centerOnScreen(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
     def startNextRound(self, event):
+        self.close()
+        self.update()
         strMsg = "{}nextround?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
         self.gObj.receiveResponse(requests.get(strMsg))
-        self.close()
-
+        # self.close()   # close was down here ...
 
 class PlayerPass(QDialog):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None, flags=Qt.WindowFlags()):
+        super().__init__(parent=parent, flags=flags)
         self.gObj = GlobalObject()
+        flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
         self.initUI()
 
     def initUI(self):
@@ -184,11 +204,8 @@ class PlayerPass(QDialog):
         vBox.addLayout(hBox, 90)
         self.setLayout(vBox)
 
-        #self.setGeometry(300, 300, 200, 150)
-
         self.resize(200, 150)
         self.__centerOnScreen()
-
         self.setWindowTitle("Player Action Required")
         self.show()
 
@@ -199,25 +216,28 @@ class PlayerPass(QDialog):
         self.move(qr.topLeft())
 
     def clickedPass(self, event):
+        self.close()
+        self.update()
         strMsg = "{}pass?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
         self.gObj.receiveResponse(requests.get(strMsg))
-        self.close()
 
     def clickedOut(self, event):
         """
             when a player goes out, we send his local hand back to the server via player.outhand
         """
+        self.close()
+        self.update()
         strMsg = "{}out?id={}&outhand={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId(), json.dumps(self.gObj.thisPlayer.outhand))
         # print("UI-clickedOut\n{}".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
-        self.gObj.dispatchEvent("outHand")
-
-        self.close()
+        self.gObj.dispatchEvent("outHand")   # try moving this to start of new round
 
 class PlayerDraw(QDialog):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None, flags=Qt.WindowFlags()):
+        super().__init__(parent=parent, flags=flags)
         self.gObj = GlobalObject()
+        flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
         self.initUI()
 
     def initUI(self):
@@ -243,11 +263,8 @@ class PlayerDraw(QDialog):
         vBox.addLayout(hBox, 90)
         self.setLayout(vBox)
 
-        #self.setGeometry(300, 300, 200, 150)
-
         self.resize(200, 150)
         self.__centerOnScreen()
-
         self.setWindowTitle("IT\'s YOUR TURN!")
         self.show()
 
@@ -258,16 +275,20 @@ class PlayerDraw(QDialog):
         self.move(qr.topLeft())
 
     def clickedDeck(self, event):
+        self.close()
+        self.update()
         strMsg = "{}pickDeck?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
         # print("draw from deck".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
-        self.close()
+        # self.close()
 
     def clickedDiscard(self, event):
+        self.close()
+        self.update()
         strMsg = "{}pickDiscard?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
         # print("draw from discard".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
-        self.close()
+        # self.close()
 
 class PlayerCheckIn(QDialog):
 
@@ -338,7 +359,6 @@ class CardIcon(QLabel):
         self.d = eval(item)
         imageName = "cardimages/{}_{}.svg".format(self.d["suit"], self.d["value"])
         self.setPixmap(QPixmap(imageName))
-
         self.show()
 
     def exposeCard(self):
@@ -425,8 +445,6 @@ class App(QDialog):
     def __init__(self):
         super().__init__()
         self.title = 'Fivecrowns Player UI'
-        # self.left = 10
-        # self.top = 10
         self.width = 1200
         self.height = 800
         self.handGroupBox = QGroupBox("Player Hand:")
@@ -656,10 +674,15 @@ class App(QDialog):
     @QtCore.pyqtSlot()
     def __outHand(self):
         """
-           clear the local hand when a new round begins
+           clear the local hand after going out (server already received the "outhand")
         """
         self.cardArray = []
         self.cardIcons = []
+
+        for i in reversed(range(self.gridHand.count())):
+            widgetToRemove = self.gridHand.itemAt(i).widget()
+            widgetToRemove.setParent(None)
+            widgetToRemove.deleteLater()
 
         return
 
