@@ -13,9 +13,11 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-04-09
+Summary of functionality through 2020-04-17
 
-    + functional now, albeit without scoring or book / run tagging
+    + added "star suit" and two extra jokers in keeping with the original deck specs
+
+    + functional now, albeit without scoring or book / run tagging  
     
     + UI messaging, dealing and discard completed (need to debug the later two)
     
@@ -29,7 +31,7 @@ Summary of functionality through 2020-04-09
 
 #### ACTIVE To-Dos
 
-    + ability to rearrange cards just prior to going out
+    + ability to rearrange cards after going out, including tagging books and runs
     
     + ability to restart the game at any round number
     
