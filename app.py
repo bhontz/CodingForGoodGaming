@@ -28,12 +28,36 @@ thisGame = Game()
         Server returns: confirmation of game resumed    
 """
 
+# @app.route("/brad", methods=['POST'])
+# def whyNot():
+#     message = "nothing happened"
+#
+#     #name = request.form.get('name', default='undefined', type=str)
+#     name = request.form.get('name')
+#     if name:
+#         # message = "Hey {}, Bob\'s your uncle!".format(name)
+#         obj = request.json(name)
+#         if obj['nickname']:
+#             message = "my nickname is: {}".format(obj['nickname'])
+#         #
+#         # obj = json.loads(name)
+#         # if 'nickname' in obj.keys():
+#         #     message = "my nickname is: {}".format(obj['nickname'])
+#
+#
+#     # message = "Hey {}, Bob\'s your uncle!".format(name)
+#
+#
+#     return message
+
+
 @app.route("/createGame", methods=['POST'])
 def createGame():
     status = "nothing happened"
 
     param = request.form["data"]
     # param = request.form.get("data")
+    #print("Param is: {}".format(param))
     if param:
         obj = json.loads(param)
         if obj['invite']:
