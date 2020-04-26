@@ -3,13 +3,18 @@ from enum import Enum
 from json import JSONEncoder
 from FiveCrownsPlayer import Player
 
+class GroupType(Enum):
+    BOOK = 0
+    RUN = 1
+
 class CardSuit(Enum):
     CLUB  = 1
     DIAMOND = 2
     HEART = 3
     SPADE = 4
-    REDJOKER = 5
-    BLACKJOKER = 6
+    STAR = 5
+    REDJOKER = 6
+    BLACKJOKER = 7
 
 class Card():
     def __init__(self, deck, suit, value):
@@ -31,9 +36,92 @@ class Card():
         return False
 
     def printCard(self):
-        self.log("deck:{} suit:{} value:{}".format(self.deck, self.suit, self.value))
-        # print("deck:{} suit:{} value:{}".format(self.deck, self.suit, self.value))
+        # self.log("deck:{} suit:{} value:{}".format(self.deck, self.suit, self.value))
+        print("deck:{} suit:{} value:{}".format(self.deck, self.suit, self.value))
         return
+
+class GroupCards():
+    def __init__(self, round, type, cards):
+        self.round = round
+        self.type = type
+        self.cards = cards # array of cards
+        self.notwild = [] # array of cards
+        self.wildCards = 0
+        self.suit = 0
+        self.value = 0
+        self.__addCards()
+        return
+
+    def __del__(self):
+        del self.notwild
+        del self.cards
+        return
+
+    def __addCards(self):
+        """
+            validates the run or book, and if it's valid,
+            passes it along to the scoring method
+        """
+        isOk = True
+        if len(self.cards) < 3:   # UI should have already have checked this, but ...
+            return json.dumps(self.cards)
+
+        for card in self.cards:
+            if card.value == 0 or card.value == (self.round + 2):
+                self.wildCards += 1
+            else:
+                self.notwild.append(card)
+                if self.type == GroupType.BOOK:
+                    if not self.value:
+                        self.value = card.value
+                    elif self.value != card.value:
+                        isOk = False
+                        break
+
+                elif self.type == GroupType.RUN:
+                    if not self.suit:
+                        self.suit = card.suit
+                    elif self.suit != card.suit:
+                        isOk = False
+                        break
+
+        # additional validation required in for RUNS ...
+        if isOk and (self.type == GroupType.RUN):
+            gaps = 0
+            n = len(self.notwild)
+            if n > 1:
+                self.notwild = sorted(self.notwild, key=lambda k: k["value"])
+
+                for i in range(1, n):
+                    gaps += (self.notwild[i].value - self.notwild[i-1].value - 1)
+
+                if not(gaps and self.wildCards >= gaps):  # make sure the wildcards fill the gaps between the values
+                    isOk = False
+
+        """
+            what to return: 
+            if this Group is valid, there will be a score key (note: the score will be zero if all cards are wildcards)
+             so we just return the score.  If the Group isn't valid, we return self.cards but not a score key
+        """
+        if isOk:
+            return json.dumps(dict(score=self.__scoreCards()))
+        else:
+            return json.dumps(self.cards)
+
+    def __scoreCards(self):
+        """
+            tally up the score implied by this Group
+            this score is then subtracted from the total score of all cards
+        """
+        score = 0
+        for card in self.cards:
+            if not (card.value == 0 or card.value == (self.round + 2)):
+                if card.value > 10:
+                    score += 10
+                else:
+                    score += card.value
+        return score
+
 
 class Encoder(JSONEncoder):
     def default(self, o):
@@ -135,11 +223,18 @@ class Game():
         """
         self.deck.clear()
         for deckId in range(0, 2):  # two decks
-            self.deck.append(Card(deckId, CardSuit.REDJOKER.value, 0))  # add the two black jokers
+            self.deck.append(Card(deckId, CardSuit.REDJOKER.value, 0))  # add the jokers
             self.deck.append(Card(deckId, CardSuit.BLACKJOKER.value, 0))
             for value in range(3, 14):
-                for suit in range(1, 5):  # len CardSuit + 1
+                for suit in range(1, 6):  # len CardSuit + 1
                     self.deck.append(Card(deckId, suit, value))
+        """
+            4/17/20 - when I added the star suit to the deck, I noted there were really SIX
+            jokers within the actual fivecrowns playing deck, so adding two more below!
+            Also incrementing deckId from loop above to accommodate ...
+        """
+        self.deck.append(Card(2, CardSuit.REDJOKER.value, 0))  # add the two extra jokers
+        self.deck.append(Card(2, CardSuit.BLACKJOKER.value, 0))
 
         # now shuffle deck and deal initial discard
         for i in range(0, random.randint(1, 7)):  # i wasn't happy with the shuffle in practice

@@ -9,6 +9,8 @@ class Player():
         self.hasDiscarded = False  # this state changes when player passes
         self.hand = [] # of Card
         self.outhand = [] # of Card, hand after player went out, in their ordering
+        self.books = [] # of Books, reinitialized after each round
+        self.runs = [] # of Runs, reinitialized after each round
         self.score = []  # of Int
         return
 

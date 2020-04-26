@@ -51,12 +51,14 @@ class GlobalObject(QtCore.QObject):
                         if not dlg.exec_():
                             pass
                             # print("DIALOG: canceled PlayerDraw")
+                        del dlg
                     elif self.thisPlayer.hasDiscarded:
                         # print("calling PlayerPass Dialog with extraCard:{} and hasDiscarded:{}".format(self.thisPlayer.hasExtraCard, self.thisPlayer.hasDiscarded))
                         dlg = PlayerPass()
                         if not dlg.exec_():
                             pass
                             # print("DIALOG: canceled PlayerPass")
+                        del dlg
 
         return
 
@@ -104,6 +106,9 @@ class EndGame(QDialog):
         self.setWindowFlags(flags)
         self.initUI()
 
+    def __del__(self):
+        del self.gObj
+
     def initUI(self):
         dlgMsg = QLabel(self)
         dlgMsg.setText("Thanks for playing {}!".format(self.gObj.thisPlayer.name))
@@ -141,6 +146,9 @@ class Dealer(QDialog):
         flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
         self.initUI()
+
+    def __del__(self):
+        del self.gObj
 
     def initUI(self):
         dlgMsg = QLabel(self)
@@ -180,6 +188,9 @@ class PlayerPass(QDialog):
         flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
         self.initUI()
+
+    def __del__(self):
+        del self.gObj
 
     def initUI(self):
         dlgMsg = QLabel(self)
@@ -240,6 +251,9 @@ class PlayerDraw(QDialog):
         self.setWindowFlags(flags)
         self.initUI()
 
+    def __del__(self):
+        del self.gObj
+
     def initUI(self):
         msg = QLabel(self)
         msg.setText("Click to Draw from Deck or Discard Pile")
@@ -298,6 +312,9 @@ class PlayerCheckIn(QDialog):
         self.playerName = QLineEdit(self)
         self.gObj = GlobalObject()
         self.initUI()
+
+    def __del__(self):
+        del self.gObj
 
     def initUI(self):
         promptLabel = QLabel(self)
@@ -466,6 +483,7 @@ class App(QDialog):
         if not dlg.exec_():
             pass
             # print("DIALOG: canceled PlayerCheckIn")
+        del dlg
 
         self.initUI()
 
@@ -504,6 +522,8 @@ class App(QDialog):
         msgGrid = QGridLayout()
         msgGrid.addWidget(scrollArea)
         self.grpMessage.setLayout(msgGrid)
+
+        # insert your alternative scoring group box in the addWidget call below
 
         self.hzMsgDiscard.addWidget(self.grpMessage, 90)
 
@@ -573,12 +593,14 @@ class App(QDialog):
                     dlg = EndGame()  # kill it off
                     if not dlg.exec_():
                         pass
+                    del dlg
 
                 elif "name" in d.keys() and "dealer" in d.keys():
                     if d["name"] == d["dealer"]:
                         dlg = Dealer()  # present the ability to advance round to the dealer
                         if not dlg.exec_():
                             pass
+                        del dlg
 
             elif not d["round"]:
                 left = d["startGameAfterCheckIns"] - d["checkIns"]
@@ -608,8 +630,8 @@ class App(QDialog):
     @QtCore.pyqtSlot()
     def __playerHand(self):
         """
-            syncs player's local hand with server, accounting for changes and retaining local hand order
-            TODO: local hand needs to wipe when the round changes
+            syncs player's local hand with the server's hand, retaining the local hand's
+            ordering
         """
 
         if self.gObj.dictResponse:
@@ -625,6 +647,7 @@ class App(QDialog):
                     self.cardArray.remove(card)
                 # print("inLocalNotServer:{}".format(inLocalNotServer))
 
+            # now wipe the UI's hand and redraw it based upon the correction above
             self.cardIcons = []
 
             # you have to kill off the grid widgets and add them back in using this technique

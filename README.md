@@ -13,8 +13,10 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-04-17
+Summary of functionality through 2020-04-26
 
+    + took a guess at the cause of last week's dialog closing bug and added some code to help
+    
     + added "star suit" and two extra jokers in keeping with the original deck specs
 
     + functional now, albeit without scoring or book / run tagging  
@@ -30,18 +32,23 @@ Summary of functionality through 2020-04-17
     + initial commit with skeletal barebones ability to serve via localhost
 
 #### ACTIVE To-Dos
+ 
+    + use of log files for the client instead of stdout.  
+    maybe client startup process sends the current log file to the server and then truncates it.
 
     + ability to rearrange cards after going out, including tagging books and runs
     
     + ability to restart the game at any round number
     
     + ability to rejoin the game and retain your (server) hand
-    
-    + automate invite game starting process (so others can execute)
-    
+        
     + redo server to Flash's API template
     
 #### COMPLETED To-Dos    
+
+    + (NEEDS TESTING TO CONFIRM) crashing bug that appears in client as dialogs that won't dismiss or repopulate
+
+    + automate invite game starting process (so others can execute)
     
     + non-modal dialogs should stay on top
 
