@@ -17,9 +17,11 @@ from email.mime.text import MIMEText
     Be sure your URL string ends with the '/' character.
 """
 
-URL = 'http://localhost:8080/'
+# URL = 'http://localhost:8080/'
 # lstPlayers = ["brad.hontz@pinpointview.com","bhontz@gmail.com"]
-lstPlayers = ["brad.hontz@pinpointview.com", "gthontz@gmail.com", "danielle.hontz@gmail.com", "josephlyon87@gmail.com", "athontz@gmail.com"]
+
+URL = 'https://fcserver-jdfua7wplq-uw.a.run.app/'
+lstPlayers = ["brad.hontz@pinpointview.com", "gthontz@gmail.com", "danielle.hontz@gmail.com"] # , "athontz@gmail.com"]
 
 class SuperFormatter(string.Formatter):
     """
@@ -104,6 +106,7 @@ if __name__ == '__main__':
 
     curl.close()
     time.sleep(5)  # wait abit for the server to get settled
+    
     """
         now return the ids
     """
@@ -121,7 +124,6 @@ if __name__ == '__main__':
         lstPlayerIDs = eval(response.decode('iso-8859-1'))
 
     curl.close()
-
     time.sleep(5)  # wait abit for the server to get settled
 
     """

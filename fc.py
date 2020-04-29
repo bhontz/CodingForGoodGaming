@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QLabel, QScrollArea, QDesktopWidget, QPushButton, QDialog, QVBoxLayout, QGridLayout, QGroupBox, QApplication, QLineEdit, QHBoxLayout)
+from PyQt5.QtWidgets import (QLabel, QScrollArea, QDesktopWidget, QPushButton, QDialog, QVBoxLayout, QGridLayout, QGroupBox, QApplication, QWidget, QLineEdit, QHBoxLayout)
 from PyQt5.QtGui import QPixmap, QDrag, QPainter
 from PyQt5.QtCore import QMimeData, Qt, QSize
 from PyQt5 import QtCore
@@ -166,7 +166,7 @@ class Dealer(QDialog):
         self.resize(200, 150)
         self.__centerOnScreen()
         self.setWindowTitle("You\'re the Dealer")
-        self.show()
+        self.setWindowModality(Qt.ApplicationModal)
 
     def __centerOnScreen(self):
         qr = self.frameGeometry()
@@ -175,11 +175,9 @@ class Dealer(QDialog):
         self.move(qr.topLeft())
 
     def startNextRound(self, event):
-        self.close()
-        self.update()
+        self.reject()
         strMsg = "{}nextround?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
         self.gObj.receiveResponse(requests.get(strMsg))
-        # self.close()   # close was down here ...
 
 class PlayerPass(QDialog):
     def __init__(self, parent=None, flags=Qt.WindowFlags()):
@@ -218,7 +216,7 @@ class PlayerPass(QDialog):
         self.resize(200, 150)
         self.__centerOnScreen()
         self.setWindowTitle("Player Action Required")
-        self.show()
+        self.setWindowModality(Qt.ApplicationModal)
 
     def __centerOnScreen(self):
         qr = self.frameGeometry()
@@ -227,8 +225,7 @@ class PlayerPass(QDialog):
         self.move(qr.topLeft())
 
     def clickedPass(self, event):
-        self.close()
-        self.update()
+        self.reject()
         strMsg = "{}pass?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
         self.gObj.receiveResponse(requests.get(strMsg))
 
@@ -236,12 +233,11 @@ class PlayerPass(QDialog):
         """
             when a player goes out, we send his local hand back to the server via player.outhand
         """
-        self.close()
-        self.update()
+        self.reject()
         strMsg = "{}out?id={}&outhand={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId(), json.dumps(self.gObj.thisPlayer.outhand))
         # print("UI-clickedOut\n{}".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
-        self.gObj.dispatchEvent("outHand")   # try moving this to start of new round
+        self.gObj.dispatchEvent("outHand")
 
 class PlayerDraw(QDialog):
     def __init__(self, parent=None, flags=Qt.WindowFlags()):
@@ -280,7 +276,7 @@ class PlayerDraw(QDialog):
         self.resize(200, 150)
         self.__centerOnScreen()
         self.setWindowTitle("IT\'s YOUR TURN!")
-        self.show()
+        self.setWindowModality(Qt.ApplicationModal)
 
     def __centerOnScreen(self):
         qr = self.frameGeometry()
@@ -289,20 +285,16 @@ class PlayerDraw(QDialog):
         self.move(qr.topLeft())
 
     def clickedDeck(self, event):
-        self.close()
-        self.update()
+        self.reject()
         strMsg = "{}pickDeck?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
         # print("draw from deck".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
-        # self.close()
 
     def clickedDiscard(self, event):
-        self.close()
-        self.update()
+        self.reject()
         strMsg = "{}pickDiscard?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
         # print("draw from discard".format(strMsg))
         self.gObj.receiveResponse(requests.get(strMsg))
-        # self.close()
 
 class PlayerCheckIn(QDialog):
 
@@ -457,17 +449,17 @@ class CardDiscardIcon(CardIcon):
                 if response:
                     qObj.receiveResponse(response)
 
-class App(QDialog):
+class App(QWidget):
 
     def __init__(self):
         super().__init__()
+        self.gObj = GlobalObject()   # communication between dialogs
         self.title = 'Fivecrowns Player UI'
         self.width = 1200
         self.height = 800
         self.handGroupBox = QGroupBox("Player Hand:")
         self.gridHand = QGridLayout()
         self.msgText = QLabel()
-        self.gObj = GlobalObject()
         self.cardArray = []
         self.cardIcons = []  # local hand, reordered from server's copy
         self.discardCardIcon = CardDiscardIcon(json.dumps({"suit":0, "value":0}), self)
@@ -495,7 +487,6 @@ class App(QDialog):
 
     def initUI(self):
         self.setWindowTitle(self.title)
-        # self.setGeometry(self.left, self.top, self.width, self.height)
         self.resize(self.width, self.height)
         self.__centerOnScreen()
 
@@ -523,18 +514,10 @@ class App(QDialog):
         msgGrid.addWidget(scrollArea)
         self.grpMessage.setLayout(msgGrid)
 
-        # insert your alternative scoring group box in the addWidget call below
-
         self.hzMsgDiscard.addWidget(self.grpMessage, 90)
 
         self.vrtSubmitDiscard = QVBoxLayout()
         self.vrtSubmitDiscard.setObjectName("vrtSubmitDiscard")
-
-        self.btnRefresh = QPushButton()
-        self.btnRefresh.setObjectName("btnRefresh")
-        self.btnRefresh.setText("Refresh")
-        self.btnRefresh.clicked.connect(lambda: self.__playerStatus(self.gObj.getPlayerId()))
-        self.vrtSubmitDiscard.addWidget(self.btnRefresh)
 
         self.grpDiscard = QGroupBox()
         self.grpDiscard.setObjectName("grpDiscard")
@@ -543,6 +526,14 @@ class App(QDialog):
         discardGrid.addWidget(self.discardCardIcon)
         self.grpDiscard.setLayout(discardGrid)
         self.vrtSubmitDiscard.addWidget(self.grpDiscard)
+
+        # this block was above the block above
+        self.btnRefresh = QPushButton()
+        self.btnRefresh.setObjectName("btnRefresh")
+        self.btnRefresh.setText("Refresh")
+        self.btnRefresh.clicked.connect(lambda: self.__playerStatus(self.gObj.getPlayerId()))
+        self.vrtSubmitDiscard.addWidget(self.btnRefresh)
+
         self.hzMsgDiscard.addLayout(self.vrtSubmitDiscard, 10)
         self.vrtMain.addLayout(self.hzMsgDiscard, 40)
 
@@ -706,6 +697,8 @@ class App(QDialog):
             widgetToRemove = self.gridHand.itemAt(i).widget()
             widgetToRemove.setParent(None)
             widgetToRemove.deleteLater()
+
+        # call the outhand dialog here
 
         return
 

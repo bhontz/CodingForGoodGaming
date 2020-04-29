@@ -13,7 +13,7 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-04-26
+Summary of functionality through 2020-04-30
 
     + took a guess at the cause of last week's dialog closing bug and added some code to help
     
@@ -32,7 +32,9 @@ Summary of functionality through 2020-04-26
     + initial commit with skeletal barebones ability to serve via localhost
 
 #### ACTIVE To-Dos
- 
+
+    + need to complete fcscore dialog
+        
     + use of log files for the client instead of stdout.  
     maybe client startup process sends the current log file to the server and then truncates it.
 
@@ -46,7 +48,9 @@ Summary of functionality through 2020-04-26
     
 #### COMPLETED To-Dos    
 
-    + (NEEDS TESTING TO CONFIRM) crashing bug that appears in client as dialogs that won't dismiss or repopulate
+    + move refresh button under discard group
+    
+    + crashing bug that appears in client as dialogs that won't dismiss or repopulate
 
     + automate invite game starting process (so others can execute)
     
