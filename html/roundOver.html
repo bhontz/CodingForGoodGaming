@@ -2,14 +2,16 @@
 <html><body>
 <style>body{background-color:#ffffff;font-size:100%;}</style>
 <div>{% if "gameOver" in template.keys() %}
-        <h1>GAME OVER! Out Player: {{template["outPlayer"]}}</h1>
+        <h1>GAME OVER! WINNING PLAYER:&nbsp;{{template["winner"]}}</h1>&nbsp;<h3>(Out Player Round {{template["round"]}}):&nbsp;{{template["outPlayer"]}}</h3>
      {% else %}
         <h1>Round {{template["round"]}} Over! Out Player: {{template["outPlayer"]}}</h1>
      {% endif %}
     <div>
     {% for player in template["playerHands"] %}
         <h3>
-        {{player["name"]}}&nbsp;        
+        {{player["name"]}}
+        <br/>
+        Total:&nbsp;{{player["totscore"]}}&nbsp;Round {{template["round"]}}:&nbsp;{{player["score"]}}&nbsp;
         {% for card in player["outHand"] %}
             <img src="cardimages/{{card["suit"]}}_{{card["value"]}}.svg" width="50" alt="image">&nbsp;
         {% endfor %}

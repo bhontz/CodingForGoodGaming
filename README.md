@@ -13,7 +13,11 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-04-30
+Summary of functionality through 2020-05-11
+
+    + running and per round score added, along with winner at end of game
+        
+    + new "grouping dialog" added after going out to form books and runs
 
     + took a guess at the cause of last week's dialog closing bug and added some code to help
     
@@ -33,12 +37,10 @@ Summary of functionality through 2020-04-30
 
 #### ACTIVE To-Dos
 
-    + need to complete fcscore dialog
+    + end of round display needs to overlay cards
         
     + use of log files for the client instead of stdout.  
     maybe client startup process sends the current log file to the server and then truncates it.
-
-    + ability to rearrange cards after going out, including tagging books and runs
     
     + ability to restart the game at any round number
     
@@ -48,6 +50,8 @@ Summary of functionality through 2020-04-30
     
 #### COMPLETED To-Dos    
 
+    + scoring added with winner 
+    
     + move refresh button under discard group
     
     + crashing bug that appears in client as dialogs that won't dismiss or repopulate

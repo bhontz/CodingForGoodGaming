@@ -1,11 +1,11 @@
-import os, sys, json, random, time
+import os, sys, itertools, json, random, time
 from enum import Enum
 from json import JSONEncoder
 from FiveCrownsPlayer import Player
 
 class GroupType(Enum):
-    BOOK = 0
-    RUN = 1
+    BOOK = 1
+    RUN = 2
 
 class CardSuit(Enum):
     CLUB  = 1
@@ -44,11 +44,12 @@ class GroupCards():
     def __init__(self, round, type, cards):
         self.round = round
         self.type = type
-        self.cards = cards # array of cards
-        self.notwild = [] # array of cards
+        self.cards = eval(cards.rstrip('\n')) # array of validated cards TODO: HAD AN \n error once????
+        self.notwild = [] # array of working cards
         self.wildCards = 0
         self.suit = 0
         self.value = 0
+        self.isValid = True   # external methods test this to see if the group is valid
         self.__addCards()
         return
 
@@ -62,65 +63,45 @@ class GroupCards():
             validates the run or book, and if it's valid,
             passes it along to the scoring method
         """
-        isOk = True
         if len(self.cards) < 3:   # UI should have already have checked this, but ...
             return json.dumps(self.cards)
 
         for card in self.cards:
-            if card.value == 0 or card.value == (self.round + 2):
+            if card["value"] == 0 or card["value"] == (self.round + 2):
                 self.wildCards += 1
             else:
                 self.notwild.append(card)
-                if self.type == GroupType.BOOK:
+                if self.type == GroupType.BOOK.value:
                     if not self.value:
-                        self.value = card.value
-                    elif self.value != card.value:
-                        isOk = False
+                        self.value = card["value"]
+                    elif self.value != card["value"]:
+                        self.isValid = False
                         break
 
-                elif self.type == GroupType.RUN:
+                elif self.type == GroupType.RUN.value:
                     if not self.suit:
-                        self.suit = card.suit
-                    elif self.suit != card.suit:
-                        isOk = False
+                        self.suit = card["suit"]
+                    elif self.suit != card["suit"]:
+                        self.isValid = False
                         break
 
         # additional validation required in for RUNS ...
-        if isOk and (self.type == GroupType.RUN):
+        if self.isValid and self.type == GroupType.RUN.value:
             gaps = 0
             n = len(self.notwild)
             if n > 1:
                 self.notwild = sorted(self.notwild, key=lambda k: k["value"])
 
                 for i in range(1, n):
-                    gaps += (self.notwild[i].value - self.notwild[i-1].value - 1)
+                    gaps += (self.notwild[i]["value"] - self.notwild[i-1]["value"] - 1)
 
-                if not(gaps and self.wildCards >= gaps):  # make sure the wildcards fill the gaps between the values
-                    isOk = False
+                if gaps and self.wildCards < gaps:  # make sure the wildcards fill the gaps between the values
+                    self.isValid = False
+                #
+                # if not(gaps and self.wildCards >= gaps):  # make sure the wildcards fill the gaps between the values
+                #     self.isValid = False
 
-        """
-            what to return: 
-            if this Group is valid, there will be a score key (note: the score will be zero if all cards are wildcards)
-             so we just return the score.  If the Group isn't valid, we return self.cards but not a score key
-        """
-        if isOk:
-            return json.dumps(dict(score=self.__scoreCards()))
-        else:
-            return json.dumps(self.cards)
-
-    def __scoreCards(self):
-        """
-            tally up the score implied by this Group
-            this score is then subtracted from the total score of all cards
-        """
-        score = 0
-        for card in self.cards:
-            if not (card.value == 0 or card.value == (self.round + 2)):
-                if card.value > 10:
-                    score += 10
-                else:
-                    score += card.value
-        return score
+        return
 
 
 class Encoder(JSONEncoder):
@@ -323,6 +304,55 @@ class Game():
 
         return
 
+    def __scoreHand(self, playerId):
+        """
+            called at the end of each round, updates the player.score array
+        """
+        if playerId in self.players.keys():
+            player = self.players[playerId]
+            groupedCards = list()
+            for group in player.groups:
+                groupedCards.extend(group.cards)
+
+            # if the outhand is equal to the groupedCards, then the score is 0
+            cardsToScore = []
+            if len(player.outhand) > len(groupedCards):
+                cardsToScore = list(itertools.filterfalse(lambda i: i in groupedCards, player.outhand))
+
+            print("SCORING CARDS:\n groupedCards:{} cardsToScore:{}".format(groupedCards, cardsToScore))
+
+            score = 0
+            for card in cardsToScore:
+                if card["value"] > 10:
+                    score += 10
+                elif card["value"] == 0:  # ungrouped joker, in this case we're counting them as 15
+                    score += 15
+                else:
+                    score += card["value"]   # would also hold true for an ungrouped round nbr wildcard
+
+            if len(player.score) < self.round:
+                player.score.append(score)   # I think we could safely call only this particular line here ...
+            else:
+                player.score[self.round] = score
+
+            player.totscore += score
+
+        return
+
+    def __winningPlayerName(self):
+        """
+            called at 'GAME OVER' returns the name of the winning player
+        """
+        winningScore = 9999
+        winningName = ""
+
+        for player in self.players.values():
+            if player.totscore < winningScore:
+                winningScore = player.totscore
+                winningName = player.name
+
+        return winningName
+
     def startNextRound(self, dealerId):
         """
             starts a new round
@@ -338,6 +368,7 @@ class Game():
             self.__createInitialDeck()
             for playerId, player in self.players.items():
                 player.hand.clear()
+                player.groups.clear()
                 player.hasExtraCard = False
                 player.hasDiscarded = False
                 self.__moveCardsFromTop(self.deck, player.hand, 2 + self.round)
@@ -419,6 +450,10 @@ class Game():
 
                 player.hasDiscarded = False  # reset
                 player.outhand = eval(outHand)  # this is the players hand in their ordering when then went out
+
+                self.__scoreHand(playerId)  # updates player.score[self.round]
+                # print("PLAYER OUT - playerId:{} round:{} score:{}".format(playerId, self.round, player.score[self.round-1]))
+
                 player.hand.clear()
                 # self.log("Player's OUTHAND\n{}: ".format(player.outhand))
 
@@ -434,6 +469,22 @@ class Game():
 
         return self.playerGameStatus(playerId)
 
+    def playerAddGroup(self, playerId, grpType, grpHand):
+        """
+            player has just created a run or a book which needs to be validated, and if valid
+            it's then added to the player structure, otherwise the hand is returned
+        """
+        # print("FROM FC - playerId:{} grpType:{} grpHand:{}".format(playerId, grpType, grpHand))
+        if playerId in self.players.keys() and playerId == self.activePlayer:
+            player = self.players[playerId]
+            group = GroupCards(self.round, grpType, grpHand)
+            if group.isValid == True:
+                player.groups.append(group)
+                return json.dumps(dict(playerId=playerId, round=self.round))
+            else:
+                return json.dumps(dict(playerId=playerId, round=self.round, cards=grpHand))
+
+
     def playerGameStatus(self, playerId):
         """
             sends a data bundle back to player with current game status and player's specifics
@@ -444,14 +495,15 @@ class Game():
             d["roundOver"] = self.roundOver
             if self.gameOver == 1:
                 d["gameOver"] = self.gameOver
+                d["winner"] = self.__winningPlayerName()
             d["name"] = self.players[playerId].name
             d["round"] = self.round
             d["outPlayer"] = self.players[self.outPlayer].name
             d["dealer"] = self.players[self.dealer].name
             lstPlayers = list()
             for playerId in self.playerOrder:
-                dPlayer = dict(name=self.players[playerId].name, outHand=json.dumps(self.players[playerId].outhand))
-                # print("playerId: {} dPlayer: {}".format(playerId, dPlayer))
+                player = self.players[playerId]
+                dPlayer = dict(name=player.name, score=player.score[self.round-1], totscore=player.totscore, outHand=json.dumps(player.outhand))
                 lstPlayers.append(dPlayer)
             d["playerHands"] = json.dumps(lstPlayers)
             d["discard"] = json.dumps(dict(suit=0, value=0), cls=Encoder)

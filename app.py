@@ -170,6 +170,17 @@ def playerOut():
 
     return s
 
+@app.route('/group', methods=['GET'])
+def playerAddGroup():
+    id = request.args.get('id', default=-1, type=int)
+    grpType = request.args.get('grpType', default=-1, type=int)
+    grpHand = request.args.get('grpHand', default="{}", type=str)
+
+    s = "group error"
+    if id != -1:
+        s = thisGame.playerAddGroup(id, grpType, grpHand)
+
+    return s
 
 @app.route('/nextround', methods=['GET'])
 def nextRound():
@@ -193,5 +204,5 @@ def peakIds():
 
 if __name__ == '__main__':
     # app.config["thisGame"] = Game()
-    app.run(debug=True, port=8080)
-    #app.run(debug=True, host='192.168.100.35', port=5000)
+    #app.run(debug=True, port=8080)
+    app.run(debug=True, host='192.168.100.35', port=8080)
