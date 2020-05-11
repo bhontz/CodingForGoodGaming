@@ -959,6 +959,7 @@ class GroupCards(QGroupBox):
         self.isActive = GroupType.BOOK.value
         self.btnRun.setEnabled(False)
         self.btnBook.setEnabled(False)
+        self.btnAllDone.setEnabled(False)
         self.cardDropSpot.updateImage(json.dumps({"suit": 10, "value": 0}))  # new book image
         return
 
@@ -969,6 +970,7 @@ class GroupCards(QGroupBox):
         self.isActive = GroupType.RUN.value
         self.btnRun.setEnabled(False)
         self.btnBook.setEnabled(False)
+        self.btnAllDone.setEnabled(False)
         self.cardDropSpot.updateImage(json.dumps({"suit": 11, "value": 0})) # new run image
         return
 
@@ -1023,6 +1025,7 @@ class GroupCards(QGroupBox):
                 self.cardsInGroups.extend(cardsInCurrentGroup)
                 del cardsInCurrentGroup
                 self.isActive = 0
+                self.btnAllDone.setEnabled(True)
 
         # TODO could do an error message here if the jsonResponse was bogus
 
@@ -1053,6 +1056,7 @@ class GroupCards(QGroupBox):
         self.btnRun.setEnabled(True)
         self.btnAccept.setEnabled(False)
         self.btnReject.setEnabled(False)
+        self.btnAllDone.setEnabled(True)
         self.nDrops = 0
 
         self.cardDropSpot.updateImage(json.dumps({"suit": 0, "value": 0})) # default image back

@@ -13,7 +13,9 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-05-11
+Summary of functionality through 2020-05-12
+
+    + disabling the "Score Remaining Cards" button after books/runs are created until they are accepted (or rejected)
 
     + running and per round score added, along with winner at end of game
         
