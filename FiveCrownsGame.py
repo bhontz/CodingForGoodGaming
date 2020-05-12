@@ -60,14 +60,13 @@ class GroupCards():
 
     def __addCards(self):
         """
-            validates the run or book, and if it's valid,
-            passes it along to the scoring method
+            validates the run or book by setting class parameter isValid == True
         """
         if len(self.cards) < 3:   # UI should have already have checked this, but ...
             return json.dumps(self.cards)
 
         for card in self.cards:
-            if card["value"] == 0 or card["value"] == (self.round + 2):
+            if card["value"] == 0 or (card["value"] == (self.round + 2)):
                 self.wildCards += 1
             else:
                 self.notwild.append(card)
@@ -86,7 +85,7 @@ class GroupCards():
                         break
 
         # additional validation required in for RUNS ...
-        if self.isValid and self.type == GroupType.RUN.value:
+        if self.isValid and (self.type == GroupType.RUN.value):
             gaps = 0
             n = len(self.notwild)
             if n > 1:
@@ -536,7 +535,7 @@ class Game():
                 player = self.players[playerId]
                 if player:
                     d["hand"] = json.dumps(player.hand, cls=Encoder)
-                    d["score"] = player.score
+                    # d["score"] = player.score
 
         return json.dumps(d)
 

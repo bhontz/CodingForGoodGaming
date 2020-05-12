@@ -474,7 +474,6 @@ class App(QWidget):
         self.gObj.addEventListener("playerMessage", self.__playerMessage)
         self.gObj.addEventListener("showDiscard", self.__showDiscard)
         self.gObj.addEventListener("updateHand", self.__playerHand)
-        # self.gObj.addEventListener("outHand", self.__outHand)
         self.gObj.addEventListener("groupcards", self.__groupCards)
         self.gObj.addEventListener("kamikazi", self.__endGame)
         self.flaskApp = Flask(self.title)

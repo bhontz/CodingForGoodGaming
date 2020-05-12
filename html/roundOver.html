@@ -1,21 +1,26 @@
 <!DOCTYPE html>
 <html><body>
-<style>body{background-color:#ffffff;font-size:100%;}</style>
-<div>{% if "gameOver" in template.keys() %}
+<style>body{background-color:#BEBEBE;font-size:100%;}</style>
+<div>
+     {% if "gameOver" in template.keys() %}
         <h1>GAME OVER! WINNING PLAYER:&nbsp;{{template["winner"]}}</h1>&nbsp;<h3>(Out Player Round {{template["round"]}}):&nbsp;{{template["outPlayer"]}}</h3>
      {% else %}
         <h1>Round {{template["round"]}} Over! Out Player: {{template["outPlayer"]}}</h1>
      {% endif %}
     <div>
     {% for player in template["playerHands"] %}
-        <h3>
-        {{player["name"]}}
-        <br/>
-        Total:&nbsp;{{player["totscore"]}}&nbsp;Round {{template["round"]}}:&nbsp;{{player["score"]}}&nbsp;
+        <h3>{{player["name"]}}:&nbsp;&nbsp;Total Score&nbsp;=&nbsp;{{player["totscore"]}}&nbsp;Round&nbsp;{{template["round"]}}&nbsp;Score&nbsp;=&nbsp;{{player["score"]}}</h3>
+        <table style="margin-left:20px;" cellpadding="0" cellspacing="0" border="0">
+        <tr>
         {% for card in player["outHand"] %}
-            <img src="cardimages/{{card["suit"]}}_{{card["value"]}}.svg" width="50" alt="image">&nbsp;
+            {%if loop.index == player["outHand"] | length %}
+                <td><img src="cardimages/png/{{card["suit"]}}_{{card["value"]}}.png" width="60" height="90" alt="image"></td>
+            {% else %}
+                <td><img src="cardimages/png/{{card["suit"]}}_{{card["value"]}}_0.png" width="15" height="90" alt="image"></td>
+            {% endif %}
         {% endfor %}
-        </h3><br/>
+        </tr>
+        </table>
     {% endfor %}
     </div>
 </div>

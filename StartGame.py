@@ -21,8 +21,8 @@ from email.mime.text import MIMEText
 # lstPlayers = ["brad.hontz@pinpointview.com","bhontz@gmail.com"]
 
 URL = 'https://fcserver-jdfua7wplq-uw.a.run.app/'
-lstPlayers = ["brad.hontz@pinpointview.com"]
-#lstPlayers = ["brad.hontz@pinpointview.com", "gthontz@gmail.com", "danielle.hontz@gmail.com", "athontz@gmail.com"] # , "athontz@gmail.com"]
+# lstPlayers = ["brad.hontz@pinpointview.com"]
+lstPlayers = ["brad.hontz@pinpointview.com", "gthontz@gmail.com", "danielle.hontz@gmail.com", "athontz@gmail.com"] # , "athontz@gmail.com"]
 
 class SuperFormatter(string.Formatter):
     """
