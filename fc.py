@@ -582,8 +582,15 @@ class App(QWidget):
                             dInner["name"] = p["name"]
                             dInner["totscore"] = p["totscore"]
                             dInner["score"] = p["score"]
-                            dInner["outHand"] = eval(p["outHand"])
+                            lstOutHand = eval(p["outHand"])
+                            grpcnt = 0
+                            for card in lstOutHand:
+                                if "grpend" in card.keys():
+                                    grpcnt += 1
+                            dInner["grpcnt"] = grpcnt
+                            dInner["outhand"] = lstOutHand
                             lstInner.append(dInner)
+                            del lstOutHand
                         dMsg["playerHands"] = lstInner
                     else:
                         dMsg[k] = v
@@ -1003,10 +1010,7 @@ class GroupCards(QGroupBox):
         cardsInCurrentGroup = list(itertools.filterfalse(lambda i: i in self.cardsInGroups, self.outhand))  # remove any other groups first ...
         cardsInCurrentGroup = list(itertools.filterfalse(lambda i: i in self.workinghand, cardsInCurrentGroup))  # ... to determine the currrent group's cards
 
-        print("working:{} outhand:{} grouphand:{}".format(self.workinghand, self.outhand, cardsInCurrentGroup))
-
         strMsg = "{}group?id={}&grpType={}&grpHand={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId(), self.isActive, json.dumps(cardsInCurrentGroup))
-        print("CALL SERVER METHOD: group\n{}".format(strMsg))
         jsonResponse = requests.get(strMsg)
         if jsonResponse:
             dR = eval(jsonResponse.content)

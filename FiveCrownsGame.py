@@ -96,9 +96,6 @@ class GroupCards():
 
                 if gaps and self.wildCards < gaps:  # make sure the wildcards fill the gaps between the values
                     self.isValid = False
-                #
-                # if not(gaps and self.wildCards >= gaps):  # make sure the wildcards fill the gaps between the values
-                #     self.isValid = False
 
         return
 
@@ -191,9 +188,12 @@ class Game():
 
         self.startGameAfterCheckIns = checkIns
 
-        for p in lstEmails:   # this role might be better suited for a separate "launch the game server" app
-            playerId = self.__addPlayer()
-            # self.__invitePlayer(p, "http://localhost:5000", playerId)
+        for p in lstEmails:
+            self.__addPlayer()
+
+        # for p in lstEmails:   # this role might be better suited for a separate "launch the game server" app
+        #     playerId = self.__addPlayer()   # you still need this though ...
+        #     # self.__invitePlayer(p, "http://localhost:5000", playerId)
 
         return json.dumps(dMsg)
 
@@ -211,7 +211,7 @@ class Game():
         """
             4/17/20 - when I added the star suit to the deck, I noted there were really SIX
             jokers within the actual fivecrowns playing deck, so adding two more below!
-            Also incrementing deckId from loop above to accommodate ...
+            Also incrementing deckId from loop above to accommodate star suit ...
         """
         self.deck.append(Card(2, CardSuit.REDJOKER.value, 0))  # add the two extra jokers
         self.deck.append(Card(2, CardSuit.BLACKJOKER.value, 0))
@@ -274,12 +274,12 @@ class Game():
 
         return nextPlayer
 
-    def __invitePlayer(self, playerEmail, urlOfGame, playerId):
-        """
-            send an email to "email" containing the URL and checkin endpoint with their ID as a PUT argument
-            TODO: this role might be better suited for a seperate game launching app
-        """
-        return
+    # def __invitePlayer(self, playerEmail, urlOfGame, playerId):
+    #     """
+    #         send an email to "email" containing the URL and checkin endpoint with their ID as a PUT argument
+    #         TODO: this role might be better suited for a seperate game launching app
+    #     """
+    #     return
 
     def __startGame(self):
         """
@@ -338,6 +338,28 @@ class Game():
 
         return
 
+    def __arrangeOuthand(self, playerId):
+        """
+            after the player is out and the hand scored, arrange the outhand in a group ordering
+            and "tag" the end of each group hand to facilitate displaying the outhand in groups
+        """
+        if playerId in self.players.keys():
+            nOutHand = list()
+            player = self.players[playerId]
+
+            for grp in player.groups:
+                for card in grp.cards:
+                    nOutHand.append(card)
+                    player.outhand.pop(player.outhand.index(card))
+                card = nOutHand[-1]
+                card["grpend"] = 1
+
+            nOutHand.extend(player.outhand)
+            player.outhand = nOutHand
+            del nOutHand
+
+        return
+
     def __winningPlayerName(self):
         """
             called at 'GAME OVER' returns the name of the winning player
@@ -367,6 +389,7 @@ class Game():
             self.__createInitialDeck()
             for playerId, player in self.players.items():
                 player.hand.clear()
+                player.outhand.clear()   #  5/12/2020
                 player.groups.clear()
                 player.hasExtraCard = False
                 player.hasDiscarded = False
@@ -452,6 +475,7 @@ class Game():
 
                 self.__scoreHand(playerId)  # updates player.score[self.round]
                 # print("PLAYER OUT - playerId:{} round:{} score:{}".format(playerId, self.round, player.score[self.round-1]))
+                self.__arrangeOuthand(playerId)  # set ups player.outhand for display purposes
 
                 player.hand.clear()
                 # self.log("Player's OUTHAND\n{}: ".format(player.outhand))
