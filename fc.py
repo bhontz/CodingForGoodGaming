@@ -2,19 +2,11 @@ from PyQt5.QtWidgets import (QLabel, QScrollArea, QDesktopWidget, QPushButton, Q
 from PyQt5.QtGui import QPixmap, QDrag, QPainter
 from PyQt5.QtCore import QMimeData, Qt, QSize
 from PyQt5 import QtCore
-import os, sys, time, itertools, functools, json, requests
+import os, sys, time, itertools, functools, json, requests, logging
 from urllib.parse import quote
 from flask import Flask, render_template_string
 from FiveCrownsPlayer import Player
 from FiveCrownsGame import GroupType
-
-exampleOutHand = [{"deck": 1, "suit": 3, "value": 8}, {"deck": 1, "suit": 3, "value": 7}, {"deck": 0, "suit": 1, "value": 4}, {"deck": 0, "suit": 6, "value": 0},\
-{"deck": 2, "suit": 3, "value": 8}, {"deck": 1, "suit": 1, "value": 4}, {"deck": 0, "suit": 3, "value": 13}, {"deck": 1, "suit": 4, "value": 10},\
-{"deck": 1, "suit": 4, "value": 2}, {"deck": 1, "suit": 2, "value": 12}, {"deck": 0, "suit": 3, "value": 3}, {"deck": 0, "suit": 2, "value":9}]
-
-
-# used during development, obsolete
-# theURL = "http://localhost:5000/" "http://e90fecd0.ngrok.io/"  #"http://192.168.100.35:5000/" # "http://localhost:5000/"
 
 @functools.lru_cache()
 class GlobalObject(QtCore.QObject):
@@ -27,6 +19,18 @@ class GlobalObject(QtCore.QObject):
         self.gameURL = None
         self.thisPlayer = None
         self.dictResponse = None
+        self.logger = logging.getLogger(__name__)
+        fn = time.strftime("logs/%Y%m%d-%H%M%S.log", time.localtime())
+        f_handler = logging.FileHandler(fn, mode="w")
+        f_handler.setFormatter(logging.Formatter('%(asctime)s,%(levelname)s,%(message)s',datefmt="%Y%m%d-%H%M%S"))
+        self.logger.addHandler(f_handler)
+        self.logger.setLevel(logging.DEBUG)
+
+    def __del__(self):
+        handlers = self.logger.handlers[:]
+        for handler in handlers:
+            handler.close()
+            self.logger.removeHandler(handler)
 
     def addEventListener(self, name, func):
         if name not in self._events:
@@ -42,7 +46,8 @@ class GlobalObject(QtCore.QObject):
     def receiveResponse(self, jsonResponse):
         if jsonResponse:
             self.dictResponse = eval(jsonResponse.content)
-            print("FROM SERVER:\n{}".format(self.dictResponse))
+            self.logger.info(format(self.dictResponse))
+            # print("FROM SERVER:\n{}".format(self.dictResponse))
             self.__updateThisPlayer()
 
             self.playerMessage()
@@ -103,13 +108,13 @@ class GlobalObject(QtCore.QObject):
 
 class EndGame(QDialog):
     """
-        quit
+        dialog to exit the game. leaving non-modal so you can scroll the final results
     """
-    def __init__(self, parent=None, flags=Qt.WindowFlags()):
-        super().__init__(parent=parent, flags=flags)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
         self.gObj = GlobalObject()
-        flags |= Qt.WindowStaysOnTopHint
-        self.setWindowFlags(flags)
         self.initUI()
 
     def __del__(self):
@@ -119,28 +124,16 @@ class EndGame(QDialog):
         dlgMsg = QLabel(self)
         dlgMsg.setText("Thanks for playing {}!".format(self.gObj.thisPlayer.name))
 
-        btnNextRound = QPushButton("Close")
-        btnNextRound.clicked.connect(self.endItAll)
+        btnNextRound = QPushButton("Exit Game")
+        btnNextRound.clicked.connect(self.parent.closeEvent)
         vBox = QVBoxLayout()
         vBox.addStretch(1)
         vBox.addWidget(dlgMsg, 10)
         vBox.addWidget(btnNextRound, 90)
         self.setLayout(vBox)
-
-        self.resize(225, 155)
-        self.__centerOnScreen()
+        self.setGeometry(0, 0, 225, 155)  # put this in the corner so you can scroll main window
         self.setWindowTitle("GAME OVER")
         self.show()
-
-    def __centerOnScreen(self):
-        qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
-
-    def endItAll(self, event):
-        self.gObj.dispatchEvent("kamikazi")
-        self.close()
 
 class Dealer(QDialog):
     """
@@ -352,10 +345,12 @@ class PlayerCheckIn(QDialog):
         s = self.playerURL.text().strip()
         n = s.find("playerReady")
         self.gObj.gameURL = s[:n]
-        print("s:{} n:{} gameURL:{}".format(s, n, self.gObj.gameURL))
 
+        self.gObj.logger.info("playerURL:{} playerID:{} gameURL:{}".format(s, n, self.gObj.gameURL))
+        print("playerURL:{} playerID:{} gameURL:{}".format(s, n, self.gObj.gameURL))
         strCheckIn = "{}&name={}".format(s, quote(self.playerName.text()))
-        print("DIALOG PlayerCheckIn:\n{} just checked In".format(strCheckIn))
+        self.gObj.logger.info("PlayerCheckIn:\n{} just checked In".format(strCheckIn))
+        # print("DIALOG PlayerCheckIn:\n{} just checked In".format(strCheckIn))
         response = requests.get(strCheckIn)
         # in this case, we're going to pull the id right away so we can create the GlobalObject thisPlayer
         if response:
@@ -475,7 +470,6 @@ class App(QWidget):
         self.gObj.addEventListener("showDiscard", self.__showDiscard)
         self.gObj.addEventListener("updateHand", self.__playerHand)
         self.gObj.addEventListener("groupcards", self.__groupCards)
-        self.gObj.addEventListener("kamikazi", self.__endGame)
         self.flaskApp = Flask(self.title)
 
         dlg = PlayerCheckIn()  # present at app launch
@@ -491,6 +485,7 @@ class App(QWidget):
         self.flaskApp = None
         del self.cardArray
         del self.cardIcons
+        del self.gObj
 
     def initUI(self):
         self.setWindowTitle(self.title)
@@ -598,7 +593,7 @@ class App(QWidget):
                 self.msgText.setText(msg)  # don't move this below the if/then/else tree
 
                 if "gameOver" in d.keys():
-                    dlg = EndGame()  # kill it off
+                    dlg = EndGame(self)  # kill it off
                     if not dlg.exec_():
                         pass
                     del dlg
@@ -749,10 +744,8 @@ class App(QWidget):
 
         return
 
-    @QtCore.pyqtSlot()
-    def __endGame(self):
+    def closeEvent(self, event):
         self.close()
-        sys.exit(0)
 
 #----*----*----*----*----*----*----*----*----*----*----*----*----*----*----*----*----*----*----*----*
 
@@ -1014,7 +1007,6 @@ class GroupCards(QGroupBox):
         jsonResponse = requests.get(strMsg)
         if jsonResponse:
             dR = eval(jsonResponse.content)
-            print("FROM SERVER:\n{}".format(dR))
 
             if "cards" in dR.keys():   # i.e. the group was determined invalid by the server ...
                 if self.isActive == GroupType.BOOK.value:

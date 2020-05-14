@@ -9,7 +9,7 @@
      {% endif %}
     <div>
     {% for player in template["playerHands"] %}
-        <h3>{{player["name"]}}:&nbsp;&nbsp;Total Score&nbsp;=&nbsp;{{player["totscore"]}}&nbsp;Round&nbsp;{{template["round"]}}&nbsp;Score&nbsp;=&nbsp;{{player["score"]}}</h3>
+        <h3>{{player["name"]}}:&nbsp;&nbsp;Total Score&nbsp;=&nbsp;{{player["totscore"]}},&nbsp;Round&nbsp;{{template["round"]}}&nbsp;Score&nbsp;=&nbsp;{{player["score"]}}</h3>
         <table style="margin-left:20px;" cellpadding="0" cellspacing="0" border="0">
         <tr>
         {% set count = namespace(value=player["grpcnt"]) %}
@@ -18,7 +18,7 @@
                 {% if "grpend" in card.keys() %}
                     <td><img src="cardimages/png/{{card["suit"]}}_{{card["value"]}}.png" width="60" height="90" alt="image"></td>
                     {% set count.value = count.value - 1 %}
-                    &nbsp;
+                    &nbsp;&nbsp;
                 {% else %}
                     <td><img src="cardimages/png/{{card["suit"]}}_{{card["value"]}}_0.png" width="15" height="90" alt="image"></td>
                 {% endif %}

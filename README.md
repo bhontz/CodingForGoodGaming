@@ -13,7 +13,11 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-05-12
+Summary of functionality through 2020-05-14
+
+    + add log files and cleaned up game exit
+
+    + grouping of cards on round-ending scoring page
 
     + disabling the "Score Remaining Cards" button after books/runs are created until they are accepted (or rejected)
 
@@ -37,12 +41,7 @@ Summary of functionality through 2020-05-12
     
     + initial commit with skeletal barebones ability to serve via localhost
 
-#### ACTIVE To-Dos
-
-    + end of round display needs to overlay cards
-        
-    + use of log files for the client instead of stdout.  
-    maybe client startup process sends the current log file to the server and then truncates it.
+#### ACTIVE To-Dos    
     
     + ability to restart the game at any round number
     
@@ -51,6 +50,9 @@ Summary of functionality through 2020-05-12
     + redo server to Flash's API template
     
 #### COMPLETED To-Dos    
+
+    + use of log files for the client instead of stdout.  
+    maybe client startup process sends the current log file to the server and then truncates it.
 
     + scoring added with winner 
     

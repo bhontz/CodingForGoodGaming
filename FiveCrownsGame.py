@@ -484,7 +484,7 @@ class Game():
 
                 if self.activePlayer == self.outPlayer:  # start a new round!
                     self.roundOver = 1
-                    if self.round == 11:  # Game ending value
+                    if self.round == 11: # Game ending value
                         self.gameOver = 1
                     else:
                         self.log("START OF ROUND:{}".format(self.round + 1))
