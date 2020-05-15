@@ -43,6 +43,9 @@ Summary of functionality through 2020-05-14
 
 #### ACTIVE To-Dos    
     
+    + add a way for players to "check out" when they close the client app
+    so that the server knows when to shut down the game
+    
     + ability to restart the game at any round number
     
     + ability to rejoin the game and retain your (server) hand

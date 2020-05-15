@@ -1,4 +1,4 @@
-import os, sys, itertools, json, random, time
+import os, sys, itertools, json, random, time, logging
 from enum import Enum
 from json import JSONEncoder
 from FiveCrownsPlayer import Player
@@ -120,6 +120,12 @@ class Game():
         self.roundOver = 0
         self.gameOver = 0
         self.URL = None
+        self.logger = logging.getLogger(__name__)
+        s_handler = logging.StreamHandler()
+        s_handler.setFormatter(logging.Formatter('%(name)s,%(asctime)s,%(levelname)s,%(message)s',datefmt="%Y%m%d-%H%M%S"))
+        self.logger.addHandler(s_handler)
+        self.logger.setLevel(logging.DEBUG)
+
         return
 
     def __del__(self):
@@ -127,17 +133,10 @@ class Game():
         del self.playerOrder
         del self.deck
         del self.discard
-        return
-
-    def log(self, msg):  # simple wrapper for logging to stdout on heroku
-        try:
-            if type(msg) is dict:
-                msg = json.dumps(msg)
-            sys.stdout.write(u"\t--fc-->{}: {}\n".format(time.strftime("%H:%M:%S", time.localtime()), msg))
-        except UnicodeEncodeError:
-            pass  # squash logging errors in case of non-ascii text
-        sys.stdout.flush()
-
+        handlers = self.logger.handlers[:]
+        for handler in handlers:
+            handler.close()
+            self.logger.removeHandler(handler)
         return
 
     def setURL(self, url):
@@ -190,10 +189,6 @@ class Game():
 
         for p in lstEmails:
             self.__addPlayer()
-
-        # for p in lstEmails:   # this role might be better suited for a separate "launch the game server" app
-        #     playerId = self.__addPlayer()   # you still need this though ...
-        #     # self.__invitePlayer(p, "http://localhost:5000", playerId)
 
         return json.dumps(dMsg)
 
@@ -274,13 +269,6 @@ class Game():
 
         return nextPlayer
 
-    # def __invitePlayer(self, playerEmail, urlOfGame, playerId):
-    #     """
-    #         send an email to "email" containing the URL and checkin endpoint with their ID as a PUT argument
-    #         TODO: this role might be better suited for a seperate game launching app
-    #     """
-    #     return
-
     def __startGame(self):
         """
             Called if we have sufficient checkIns.
@@ -318,7 +306,7 @@ class Game():
             if len(player.outhand) > len(groupedCards):
                 cardsToScore = list(itertools.filterfalse(lambda i: i in groupedCards, player.outhand))
 
-            print("SCORING CARDS:\n groupedCards:{} cardsToScore:{}".format(groupedCards, cardsToScore))
+            # print("SCORING CARDS:\n groupedCards:{} cardsToScore:{}".format(groupedCards, cardsToScore))
 
             score = 0
             for card in cardsToScore:
@@ -389,7 +377,7 @@ class Game():
             self.__createInitialDeck()
             for playerId, player in self.players.items():
                 player.hand.clear()
-                player.outhand.clear()   #  5/12/2020
+                player.outhand.clear()
                 player.groups.clear()
                 player.hasExtraCard = False
                 player.hasDiscarded = False
@@ -484,10 +472,10 @@ class Game():
 
                 if self.activePlayer == self.outPlayer:  # start a new round!
                     self.roundOver = 1
-                    if self.round == 11: # Game ending value
+                    if self.round == 11: # Game ends after round 11
                         self.gameOver = 1
                     else:
-                        self.log("START OF ROUND:{}".format(self.round + 1))
+                        self.logger.info("START OF ROUND:{}".format(self.round + 1))
                         self.dealer = self.__nextPlayer(self.dealer)  # need to set the dealer before the next round starts
 
         return self.playerGameStatus(playerId)
@@ -575,5 +563,4 @@ class Game():
         """
 
         return json.dumps(self.playerOrder)
-
 
