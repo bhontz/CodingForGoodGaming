@@ -13,7 +13,9 @@ All rights reserved by PlayMonster, LLC.
 
 #### Version History
 
-Summary of functionality through 2020-05-14
+Summary of functionality through 2020-05-24
+
+    + added postgame reporting
 
     + add log files and cleaned up game exit
 
@@ -42,11 +44,10 @@ Summary of functionality through 2020-05-14
     + initial commit with skeletal barebones ability to serve via localhost
 
 #### ACTIVE To-Dos    
+    + replace flask templating with jinja2 in fc module    
 
-    + email final score HTML to all players
-    
-    + disable REFRESH button when "game over" dialog is shown
-    
+    + clean up final report and decide if server sends the emails
+        
     + put a "IS GROUPING" status comment up when player is grouping cards
     
     + add a way for players to "check out" when they close the client app
@@ -63,7 +64,8 @@ Summary of functionality through 2020-05-14
     + use sockets to eliminate "refresh" client/server model design
     
 #### COMPLETED To-Dos    
-
+    + email final score HTML to all players (at least prelim version)
+    
     + use of log files for the client instead of stdout.  
     maybe client startup process sends the current log file to the server and then truncates it.
 

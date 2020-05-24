@@ -1,4 +1,4 @@
-import os, sys, itertools, json, random, time, logging, jinja2, requests
+import os, sys, itertools, json, random, time, logging, jinja2, requests, github3
 from datetime import datetime
 from pytz import timezone
 from enum import Enum
@@ -380,35 +380,29 @@ class Game():
         minutes, seconds = divmod(remainder, 60)
         dTemplate = dict(startDateTime=self.startDateTime.strftime("%H:%M:%S"), winner=self.__winningPlayerName(), \
                          duration="H:{} M:{}".format(hours, minutes), playerInfo=list())
-        d = {}
         for player in self.players.values():
+            d = {}
             d["name"] = player.name
             d["totscore"] = player.totscore
             for n, score in enumerate(player.score):
                 label = "R{}".format(n+1)
                 d[label] = score
-        dTemplate["playerInfo"].append(d)
+            dTemplate["playerInfo"].append(d)
 
-        print(d)
-        print("------------------------------------")
-
-        # templateURL = "https://github finalScoreReport"
-        # template = jinja2.Template(requests.get(templateURL).text)
-        try:
-            fp = open("html/finalScoreReport.html", "rt")
-        except IOError as detail:
-            print("ERROR!!!!")
-        else:
-            strContent = fp.read()
-            fp.close()
-
-        print(strContent)
-        print("------------------------------------")
-        ##"<html><body><div id='main'><h3>GAME: {{startDateTime}} WINNING PLAYER: {{winner}}&nbsp;&nbsp; Game Duration: {{duration}}</h3></div></body></html>"
-        template = jinja2.Template(strContent)
+        templateURL = "https://bhontz.github.io/FiveCrownsReporting/html/finalScoreReport.html"
+        template = jinja2.Template(requests.get(templateURL).text)
         strReport = template.render(dTemplate)
-
-        print(strReport)
+        """
+            TODO: save the strReport back to github as per scratch_github_example (saving into HTML folder)
+            HOWEVER, this seems to "mess up" the local git repository when you go to PUSH,
+            so you may want to figure that out first ...
+        """
+        # gh CREATION OBJECT (github3.login method) line goes here
+        repo = gh.repository('bhontz', 'FiveCrownsReporting')
+        bytes = strReport.encode()
+        fn = dTemplate["startDateTime"].replace(":", "-")
+        repo.create_file(path="html/{}.html".format(fn), message='FiveCrownGame Results Update', content=bytes)
+        del gh
 
         return
 
@@ -542,7 +536,7 @@ class Game():
 
                 if self.activePlayer == self.outPlayer:  # start a new round!
                     self.roundOver = 1
-                    if self.round == 3: # Game ends after round 11
+                    if self.round == 11: # Game ends after round 11
                         self.gameOver = 1
                     else:
                         self.logger.info("START OF ROUND:{}".format(self.round + 1))
