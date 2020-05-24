@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<body>
+<div id="main">
+<h2>FiveCrowns Game Scoring Summary - Game Started: {{startDateTime}}</h2>
+<h3>WINNING PLAYER: {{winner}}&nbsp;&nbsp; Game Duration: {{duration}}</h3>
+<table style="margin-left:20px;table-layout:fixed;" cellpadding="0" cellspacing="0" border="1"><caption>Round Scores</caption>
+    <tr>
+        <td>Player</td>
+        <td width="60px" align="center">TOTAL</td>
+        <td width="40px" align="center">R1</td>
+        <td width="40px" align="center">R2</td>
+        <td width="40px" align="center">R3</td>
+        <td width="40px" align="center">R4</td>
+        <td width="40px" align="center">R5</td>
+        <td width="40px" align="center">R6</td>
+        <td width="40px" align="center">R7</td>
+        <td width="40px" align="center">R8</td>
+        <td width="40px" align="center">R9</td>
+        <td width="40px" align="center">R10</td>
+        <td width="40px" align="center">R11</td>
+    </tr>
+    {% for player in playerInfo %}
+        <tr>
+        {% for v in player.values() %}
+            <td align="center">{{v}}</td>
+        {% endfor %}
+        </tr>
+    {% endfor %}
+</table>
+</div>
+</body>
+</html>
