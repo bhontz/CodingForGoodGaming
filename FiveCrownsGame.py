@@ -1,4 +1,6 @@
-import os, sys, itertools, json, random, time, logging
+import os, sys, itertools, json, random, time, logging, jinja2, requests
+from datetime import datetime
+from pytz import timezone
 from enum import Enum
 from json import JSONEncoder
 from FiveCrownsPlayer import Player
@@ -106,7 +108,7 @@ class Encoder(JSONEncoder):
 
 class Game():
     def __init__(self):
-        self.startDateTime = time.localtime()
+        self.startDateTime = datetime.now()
         self.players = {} # of Player
         self.playerOrder = [] # dealer ordering
         self.deck = []  # of Card
@@ -179,15 +181,15 @@ class Game():
             (note: "un-deal" players that did not check in and then delete these players at Game Start)
         """
         self.__createInitialDeck()  # moved here from __init__
-        self.startDateTime = time.localtime()
-        dMsg = {"message": "New Game Started at: {}  Invited {} players by email.  Waiting for {} players to check in".format(time.strftime("%H:%M:%S", self.startDateTime), len(lstEmails), checkIns)}
+        self.startDateTime = datetime.now(timezone('America/Los_Angeles'))
+        dMsg = {"message": "New Game Started at: {}  Invited {} players by email.  Waiting for {} players to check in".format(self.startDateTime.strftime("%H:%M:%S"), len(lstEmails), checkIns)}
 
         if not checkIns or checkIns > len(lstEmails):
             checkIns = len(lstEmails)
 
         self.startGameAfterCheckIns = checkIns
 
-        for p in lstEmails:
+        for email in lstEmails:
             self.__addPlayer()
 
         return json.dumps(dMsg)
@@ -360,7 +362,55 @@ class Game():
                 winningScore = player.totscore
                 winningName = player.name
 
+
         return winningName
+
+    def __finalScoreReport(self):
+        """
+            Uses github3 library to create a file within CodingForGoodGaming repository.
+            The file contains an HTML format report of the game scoring by round.
+            Objective is for players to receive this report by email post-game.
+            TODO: handle emailing.  That may be best left for the StartGame module
+            as that module has the email addresses and the start time of the game.
+            (starttime will be used for the html file name).  A template for the report
+            is hosted on the same repo.
+        """
+        duration = datetime.now(timezone('America/Los_Angeles')) - self.startDateTime
+        hours, remainder = divmod(duration.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        dTemplate = dict(startDateTime=self.startDateTime.strftime("%H:%M:%S"), winner=self.__winningPlayerName(), \
+                         duration="H:{} M:{}".format(hours, minutes), playerInfo=list())
+        d = {}
+        for player in self.players.values():
+            d["name"] = player.name
+            d["totscore"] = player.totscore
+            for n, score in enumerate(player.score):
+                label = "R{}".format(n+1)
+                d[label] = score
+        dTemplate["playerInfo"].append(d)
+
+        print(d)
+        print("------------------------------------")
+
+        # templateURL = "https://github finalScoreReport"
+        # template = jinja2.Template(requests.get(templateURL).text)
+        try:
+            fp = open("html/finalScoreReport.html", "rt")
+        except IOError as detail:
+            print("ERROR!!!!")
+        else:
+            strContent = fp.read()
+            fp.close()
+
+        print(strContent)
+        print("------------------------------------")
+        ##"<html><body><div id='main'><h3>GAME: {{startDateTime}} WINNING PLAYER: {{winner}}&nbsp;&nbsp; Game Duration: {{duration}}</h3></div></body></html>"
+        template = jinja2.Template(strContent)
+        strReport = template.render(dTemplate)
+
+        print(strReport)
+
+        return
 
     def startNextRound(self, dealerId):
         """
@@ -400,6 +450,26 @@ class Game():
             self.__startGame()  # will start game now given checkIns
 
         return self.playerGameStatus(playerId)
+
+    def playerCheckOut(self, playerId):
+        """
+            player is leaving the game, for now, from the "Game Over" dialog
+        """
+        s = "Error occurred!"
+
+        if playerId in self.players.keys():
+            self.playerOrder.pop(self.playerOrder.index(playerId))
+
+            if len(self.playerOrder) == 0:
+                s = "Ending Game Started: {}".format(self.startDateTime.strftime("%H:%M:%S"))
+                self.__finalScoreReport()
+                self.__wipeOut()
+            else:
+                s = "PlayerId: {} has left the game".format(self.playerId)
+
+        self.logger.info(s)
+
+        return json.dumps(s)
 
     def pickFromDeck(self, playerId):
         """
@@ -472,7 +542,7 @@ class Game():
 
                 if self.activePlayer == self.outPlayer:  # start a new round!
                     self.roundOver = 1
-                    if self.round == 11: # Game ends after round 11
+                    if self.round == 3: # Game ends after round 11
                         self.gameOver = 1
                     else:
                         self.logger.info("START OF ROUND:{}".format(self.round + 1))
@@ -552,7 +622,7 @@ class Game():
         return json.dumps(d)
 
     def endGame(self):
-        s = "Ending Game Started: {}".format(time.strftime("%H:%M:%S", self.startDateTime))
+        s = "Ending Game Started: {}".format(self.startDateTime.strftime("%H:%M:%S"))
         self.__wipeOut()
 
         return json.dumps(s)

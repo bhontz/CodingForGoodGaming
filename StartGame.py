@@ -15,10 +15,11 @@ from email.mime.text import MIMEText
     *** NOTE *** 
     You need to modify the two variables below before running this process!
     Be sure your URL string ends with the '/' character.
+    TODO: pickle the email address lists to get them off github, or use an INI which you could change each time ...
 """
 
 # URL = 'http://localhost:8080/'
-# lstPlayers = ["brad.hontz@pinpointview.com","bhontz@gmail.com"]
+# lstPlayers = ["brad.hontz@pinpointview.com","bhontz@gmail.com"]    # pickle as lstPlayersTestTwoPlayers.bin, lstPlayersTestOnePlayer.bin
 
 URL = 'https://fcserver-jdfua7wplq-uw.a.run.app/'
 # lstPlayers = ["brad.hontz@pinpointview.com"]
@@ -109,7 +110,7 @@ if __name__ == '__main__':
     time.sleep(5)  # wait abit for the server to get settled
     
     """
-        now return the ids
+        now return the player ids to assure the server started the game
     """
     curl = pycurl.Curl()
     buffer = BytesIO()

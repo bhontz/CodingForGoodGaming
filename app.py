@@ -50,21 +50,18 @@ thisGame = Game()
 #
 #     return message
 
-
 @app.route("/createGame", methods=['POST'])
 def createGame():
     status = "nothing happened"
 
     param = request.form["data"]
-    # param = request.form.get("data")
-    #print("Param is: {}".format(param))
+
     if param:
         obj = json.loads(param)
         if obj['invite']:
             status = thisGame.createGame(obj['invite'], obj['startGameAfter'])
 
     return status
-
 
 """
     API methods for client PLAYER:
@@ -89,7 +86,6 @@ def createGame():
         pass: player indicates that they're done and control passes to next player [mutually exclusive with out] [POST playerID]
 """
 
-
 @app.route('/playerReady', methods=['GET'])
 def playerCheckIn():
     id = request.args.get('id', default=-1, type=int)
@@ -102,7 +98,6 @@ def playerCheckIn():
 
     return s
 
-
 @app.route('/playerStatus', methods=['GET'])
 def playerStatus():
     id = request.args.get('id', default=-1, type=int)
@@ -112,7 +107,6 @@ def playerStatus():
         s = thisGame.playerGameStatus(id)
 
     return s
-
 
 @app.route('/pickDeck', methods=['GET'])
 def pickDeck():
@@ -193,10 +187,19 @@ def nextRound():
     return s
 
 
+@app.route('/playerQuit', methods=['GET'])
+def playerQuit():
+    id = request.args.get('id', default=-1, type=int)
+
+    s = "playerQuit error"
+    if id != -1:
+        s = thisGame.playerCheckOut(id)
+
+    return s
+
 @app.route('/endGame', methods=['GET'])
 def endGame():
     return thisGame.endGame()
-
 
 @app.route('/peakIds', methods=['GET'])
 def peakIds():

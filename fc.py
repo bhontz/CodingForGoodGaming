@@ -591,12 +591,25 @@ class App(QWidget):
                         dMsg[k] = v
                 msg = self.__htmlMessage("roundOver.html", dMsg)
                 self.msgText.setText(msg)  # don't move this below the if/then/else tree
-
+                """
+                    TODO:  if round == 11, create a file from "msg" which is then pushed to the git hub repo 
+                    EOG folder (e.g. ResultsGameEnding202005272103.html).  Note that this file will 
+                    need to get the cardimage path references correct.  Only one of these files (each player
+                    could potentially send one ... needs to go to the github repo, so you need to think that
+                    through (should it be the active dealer for example?)  THe repo needs to be enabled
+                    with github pages (github.io) for this to work properly
+                """
                 if "gameOver" in d.keys():
+                    self.btnRefresh.setEnabled(False)  # don't let the user touch this anymore ...
                     dlg = EndGame(self)  # kill it off
                     if not dlg.exec_():
                         pass
                     del dlg
+
+                    strMsg = "{}playerQuit?id={}".format(self.gObj.getServerURL(), self.gObj.getPlayerId())
+                    # print("CALL SERVER METHOD: playerQuit\n{}".format(strMsg))
+                    jsonResponse = requests.get(strMsg)
+                    self.gObj.logger.info("Server Response from playerQuit: {}".format(jsonResponse))
 
                 elif "name" in d.keys() and "dealer" in d.keys():
                     if d["name"] == d["dealer"]:
@@ -699,7 +712,8 @@ class App(QWidget):
 
     @QtCore.pyqtSlot()
     def __groupCards(self):
-        # call the outhand dialog here
+        # TODO: if you wanted a player message indicating that the player is in the process of grouping their cards,
+        # you'd need to add another server message here
         dlg = GroupDialog(len(self.gObj.thisPlayer.outhand) - 2, self.gObj.thisPlayer.outhand)   # NEED A WAY TO GET THE ROUND !!!!
         if not dlg.exec_():
             pass

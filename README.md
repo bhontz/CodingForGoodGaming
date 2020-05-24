@@ -42,15 +42,25 @@ Summary of functionality through 2020-05-14
     + initial commit with skeletal barebones ability to serve via localhost
 
 #### ACTIVE To-Dos    
+
+    + email final score HTML to all players
+    
+    + disable REFRESH button when "game over" dialog is shown
+    
+    + put a "IS GROUPING" status comment up when player is grouping cards
     
     + add a way for players to "check out" when they close the client app
     so that the server knows when to shut down the game
+    
+    + get emails off github (use ini or pickle)
     
     + ability to restart the game at any round number
     
     + ability to rejoin the game and retain your (server) hand
         
     + redo server to Flash's API template
+    
+    + use sockets to eliminate "refresh" client/server model design
     
 #### COMPLETED To-Dos    
 
