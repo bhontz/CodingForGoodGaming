@@ -44,6 +44,8 @@ Summary of functionality through 2020-05-24
     + initial commit with skeletal barebones ability to serve via localhost
 
 #### ACTIVE To-Dos    
+    + github authentication token and use of google cloud environmental variables    
+
     + replace flask templating with jinja2 in fc module    
 
     + clean up final report and decide if server sends the emails
@@ -64,7 +66,10 @@ Summary of functionality through 2020-05-24
     + use sockets to eliminate "refresh" client/server model design
     
 #### COMPLETED To-Dos    
-    + email final score HTML to all players (at least prelim version)
+    
+    + revised final score email to include simple analytics 
+    
+    + email final score HTML to all players 
     
     + use of log files for the client instead of stdout.  
     maybe client startup process sends the current log file to the server and then truncates it.

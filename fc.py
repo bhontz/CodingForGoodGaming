@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (QLabel, QScrollArea, QDesktopWidget, QPushButton, Q
 from PyQt5.QtGui import QPixmap, QDrag, QPainter
 from PyQt5.QtCore import QMimeData, Qt, QSize
 from PyQt5 import QtCore
-import os, sys, time, itertools, functools, json, requests, logging
+import os, sys, time, itertools, functools, json, requests, logging, jinja2
 from urllib.parse import quote
 from flask import Flask, render_template_string
 from FiveCrownsPlayer import Player
@@ -749,6 +749,9 @@ class App(QWidget):
             fp.close()
             with self.flaskApp.app_context():
                 s = render_template_string(s, template=dMsg)
+            # you need to sort out dictionary usage before you can switch over
+            # template = jinja2.Template(s)
+            # s = template.render(dMsg)
 
         return s
 

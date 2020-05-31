@@ -115,13 +115,14 @@ class Game():
         self.discard = [] # of Card
         self.dealer = 0
         self.activePlayer = 0
-        self.outPlayer = 0
+        self.outPlayer = [] # of playerId
         self.round = 0
         self.checkIns = 0
         self.startGameAfterCheckIns = 0
         self.roundOver = 0
         self.gameOver = 0
         self.URL = None
+        self.turns = [] # int counter - per round, nbr discards / nbr players
         self.logger = logging.getLogger(__name__)
         s_handler = logging.StreamHandler()
         s_handler.setFormatter(logging.Formatter('%(name)s,%(asctime)s,%(levelname)s,%(message)s',datefmt="%Y%m%d-%H%M%S"))
@@ -163,9 +164,10 @@ class Game():
         self.playerOrder = []  # dealer ordering
         self.deck = []  # of Card
         self.discard = []  # of Card
+        self.turns = [] # int array
         self.dealer = 0
         self.activePlayer = 0
-        self.outPlayer = 0
+        self.outPlayer = []
         self.round = 0
         self.checkIns = 0
         self.startGameAfterCheckIns = 0
@@ -288,6 +290,7 @@ class Game():
         self.gameOn = 1
         self.dealer = self.playerOrder[0]
         self.activePlayer = self.__nextPlayer(self.dealer)
+        self.turns.append(0)
 
         self.startNextRound(self.dealer)
 
@@ -379,30 +382,47 @@ class Game():
         hours, remainder = divmod(duration.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         dTemplate = dict(startDateTime=self.startDateTime.strftime("%H:%M:%S"), winner=self.__winningPlayerName(), \
-                         duration="H:{} M:{}".format(hours, minutes), playerInfo=list())
+                         duration="{} hours, {} minutes".format(hours, minutes), playerInfo=list())
+
+        dTemplate["turns"] = list(self.turns)
+        dTemplate["totturns"] = sum(self.turns)
+
         for player in self.players.values():
             d = {}
             d["name"] = player.name
             d["totscore"] = player.totscore
+            d["nbrTimesOut"] = player.nbrTimesOut
             for n, score in enumerate(player.score):
                 label = "R{}".format(n+1)
-                d[label] = score
+                if player.id == self.outPlayer[n]:
+                    d[label] = "{}*".format(score)
+                else:
+                    d[label] = score
             dTemplate["playerInfo"].append(d)
 
-        templateURL = "https://bhontz.github.io/FiveCrownsReporting/html/finalScoreReport.html"
-        template = jinja2.Template(requests.get(templateURL).text)
+        try:
+            fp = open("html/finalScoreReportNew.html", "rt")
+        except IOError as detail:
+            s = "BAD ERROR"
+        else:
+            s = fp.read()
+            fp.close()
+
+        # templateURL = "https://bhontz.github.io/FiveCrownsReporting/html/finalScoreReportingNew.html"
+        # template = jinja2.Template(requests.get(templateURL).text)
+
+        template = jinja2.Template(s)  # this is associated with the file reading test
         strReport = template.render(dTemplate)
-        """
-            TODO: save the strReport back to github as per scratch_github_example (saving into HTML folder)
-            HOWEVER, this seems to "mess up" the local git repository when you go to PUSH,
-            so you may want to figure that out first ...
-        """
-        # gh CREATION OBJECT (github3.login method) line goes here
-        repo = gh.repository('bhontz', 'FiveCrownsReporting')
-        bytes = strReport.encode()
-        fn = dTemplate["startDateTime"].replace(":", "-")
-        repo.create_file(path="html/{}.html".format(fn), message='FiveCrownGame Results Update', content=bytes)
-        del gh
+
+        print(strReport)
+
+        # # gh CREATION OBJECT (github3.login method) line goes here gh = github3.login(username='bhontz', password='pw')
+        # gh = github3.login(username='bhontz', password='S3@rsP0nch0')
+        # repo = gh.repository('bhontz', 'FiveCrownsReporting')
+        # bytes = strReport.encode()
+        # fn = dTemplate["startDateTime"].replace(":", "-")
+        # repo.create_file(path="html/{}.html".format(fn), message='FiveCrownGame Results Update', content=bytes)
+        # del gh
 
         return
 
@@ -412,10 +432,12 @@ class Game():
         """
         if self.players[dealerId] == self.players[self.dealer]:  # only the dealer can call this method
             self.roundOver = 0
-            self.outPlayer = 0
-            self.activePlayer = self.__nextPlayer(dealerId)  # added after Easter evening game
+            self.activePlayer = self.__nextPlayer(dealerId)
+
+            self.turns[self.round - 1] = self.turns[self.round - 1] // len(self.playerOrder) # need int division here (floor division operator)
 
             self.round += 1
+            self.turns.append(0)
 
             # shuffle full deck, deal first discard, and deal to the players
             self.__createInitialDeck()
@@ -459,7 +481,7 @@ class Game():
                 self.__finalScoreReport()
                 self.__wipeOut()
             else:
-                s = "PlayerId: {} has left the game".format(self.playerId)
+                s = "PlayerId: {} has left the game".format(self.players[playerId].name)
 
         self.logger.info(s)
 
@@ -503,6 +525,7 @@ class Game():
                 self.discard.append(playerDiscard)
                 player.hasExtraCard = False
                 player.hasDiscarded = True
+                self.turns[self.round - 1] += 1 # keep track of the number of discards within a round
 
         return self.playerGameStatus(playerId)
 
@@ -519,8 +542,10 @@ class Game():
         if playerId in self.players.keys() and playerId == self.activePlayer:
             player = self.players[playerId]
             if len(player.hand) == (2 + self.round) and player.hasDiscarded == True:
-                if not self.outPlayer:   # outPlayer is the first one out
-                    self.outPlayer = playerId
+
+                if len(self.outPlayer) < self.round: # give a moment to think this through ...
+                    self.outPlayer.append(playerId)  # first player out this round
+                    player.nbrTimesOut += 1
 
                 player.hasDiscarded = False  # reset
                 player.outhand = eval(outHand)  # this is the players hand in their ordering when then went out
@@ -534,7 +559,7 @@ class Game():
 
                 self.activePlayer = self.__nextPlayer(self.activePlayer)
 
-                if self.activePlayer == self.outPlayer:  # start a new round!
+                if self.activePlayer == self.outPlayer[self.round - 1]:  # start a new round!
                     self.roundOver = 1
                     if self.round == 11: # Game ends after round 11
                         self.gameOver = 1
@@ -559,7 +584,6 @@ class Game():
             else:
                 return json.dumps(dict(playerId=playerId, round=self.round, cards=grpHand))
 
-
     def playerGameStatus(self, playerId):
         """
             sends a data bundle back to player with current game status and player's specifics
@@ -573,7 +597,7 @@ class Game():
                 d["winner"] = self.__winningPlayerName()
             d["name"] = self.players[playerId].name
             d["round"] = self.round
-            d["outPlayer"] = self.players[self.outPlayer].name
+            d["outPlayer"] = self.players[self.outPlayer[self.round - 1]].name
             d["dealer"] = self.players[self.dealer].name
             lstPlayers = list()
             for playerId in self.playerOrder:
@@ -604,8 +628,8 @@ class Game():
                 else:
                     d["hasDiscarded"] = 1
 
-            if self.outPlayer:
-                d["outPlayer"] = self.players[self.outPlayer].name
+            if self.round and len(self.outPlayer) == self.round:
+                d["outPlayer"] = self.players[self.outPlayer[self.round - 1]].name
 
             if playerId in self.players.keys():
                 player = self.players[playerId]

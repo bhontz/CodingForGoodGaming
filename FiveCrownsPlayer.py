@@ -12,11 +12,13 @@ class Player():
         self.groups = [] # array of books or runs made by the player, reinitialized after each round
         self.score = []  # one int per round in order by round nbr
         self.totscore = 0 # cumulative total of array score
+        self.nbrTimesOut = 0 # cumulative nbr of times this player was the outPlayer
         return
 
     def __del__(self):
         del self.hand
         del self.outhand
+        del self.groups
         del self.score
         del self
         return
