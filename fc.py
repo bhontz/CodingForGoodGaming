@@ -8,6 +8,8 @@ from flask import Flask, render_template_string
 from FiveCrownsPlayer import Player
 from FiveCrownsGame import GroupType
 
+__version__ = "20200606"
+
 @functools.lru_cache()
 class GlobalObject(QtCore.QObject):
     """
@@ -310,7 +312,7 @@ class PlayerCheckIn(QDialog):
 
     def initUI(self):
         promptLabel = QLabel(self)
-        promptLabel.setText("Paste the URL from the EMAIL INVITATION:")
+        promptLabel.setText("Please paste the URL from the EMAIL INVITATION:")
         nameLabel = QLabel(self)
         nameLabel.setText("Enter your name:")
         self.btnSubmit = QPushButton("Submit")
@@ -330,7 +332,7 @@ class PlayerCheckIn(QDialog):
 
         self.resize(500, 150)
         self.__centerOnScreen()
-        self.setWindowTitle('Player Check In')
+        self.setWindowTitle("Game Version: {} - Player Check In".format(__version__))
 
         self.show()
 
@@ -457,7 +459,7 @@ class App(QWidget):
     def __init__(self):
         super().__init__()
         self.gObj = GlobalObject()   # communication between dialogs
-        self.title = 'Fivecrowns Player UI'
+        self.title = "Game Version: {} - Five Crowns Player UI".format(__version__)
         self.width = 1200
         self.height = 800
         self.handGroupBox = QGroupBox("Player Hand:")
