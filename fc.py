@@ -344,10 +344,12 @@ class PlayerCheckIn(QDialog):
         # load up the URL we came from
         s = self.playerURL.text().strip()
         n = s.find("playerReady")
+        nid = s.rfind("=") + 1
         self.gObj.gameURL = s[:n]
 
-        self.gObj.logger.info("playerURL:{} playerID:{} gameURL:{}".format(s, n, self.gObj.gameURL))
-        print("playerURL:{} playerID:{} gameURL:{}".format(s, n, self.gObj.gameURL))
+        # TODO: n == the offset of the string 'playerReady' within the URL, and is not the playerID
+        self.gObj.logger.info("playerURL:{} playerID:{} gameURL:{}".format(s, s[nid:], self.gObj.gameURL))
+        print("playerURL:{} playerID:{} gameURL:{}".format(s, s[nid:], self.gObj.gameURL))
         strCheckIn = "{}&name={}".format(s, quote(self.playerName.text()))
         self.gObj.logger.info("PlayerCheckIn:\n{} just checked In".format(strCheckIn))
         # print("DIALOG PlayerCheckIn:\n{} just checked In".format(strCheckIn))

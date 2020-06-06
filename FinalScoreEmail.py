@@ -1,8 +1,5 @@
 """
-    Use this module to create a new game.  This process entails knowing where the game engine
-    is hosted (it's URL) and knowing the emails of the players you wish to invite.  You can
-    also decide to start the game with fewer than the number of players you've invited, in
-    the event you feel you'll have some "no shows"
+    Use this module to email the final game score.
 """
 import os, sys, time, string, smtplib, pycurl, json
 from io import BytesIO
@@ -18,12 +15,11 @@ from email.mime.text import MIMEText
     TODO: pickle the email address lists to get them off github, or use an INI which you could change each time ...
 """
 
-# URL = 'http://localhost:8080/'
-# lstPlayers = ["brad.hontz@pinpointview.com","bhontz@gmail.com"]    # pickle as lstPlayersTestTwoPlayers.bin, lstPlayersTestOnePlayer.bin
+GameName = "19:39:57"  # string like 20:12:56 representing the game start time
 
 URL = 'https://fcserver-jdfua7wplq-uw.a.run.app/'
 # lstPlayers = ["brad.hontz@pinpointview.com"]
-lstPlayers = ["brad.hontz@pinpointview.com", "gthontz@gmail.com", "danielle.hontz@gmail.com", "athontz@gmail.com"] # , "athontz@gmail.com"]
+lstPlayers = ["brad.hontz@pinpointview.com", "gthontz@gmail.com", "danielle.hontz@gmail.com", "athontz@gmail.com"]  # , "athontz@gmail.com"]
 
 class SuperFormatter(string.Formatter):
     """
@@ -31,11 +27,13 @@ class SuperFormatter(string.Formatter):
         Using this to add (very simplistic) condidtional capability to templating.
         The FLASK template engine is a good one to use if you need something more complex.
     """
+
     def format_field(self, value, spec):
         if spec.startswith('if'):
             return (value and spec.partition(':')[-1]) or ''
         else:
             return super(SuperFormatter, self).format_field(value, spec)
+
 
 def SimpleEmailMessage(strToPerson, subject, html, text, lstAttachments):
     """
@@ -70,7 +68,8 @@ def SimpleEmailMessage(strToPerson, subject, html, text, lstAttachments):
     try:
         smtpObj = smtplib.SMTP_SSL("smtp.gmail.com", 465)
         smtpObj.ehlo()
-        smtpObj.login(cfg.get('email','user'), cfg.get('email','pwd'))   # Credentials found in local file emailcredentials.ini
+        smtpObj.login(cfg.get('email', 'user'),
+                      cfg.get('email', 'pwd'))  # Credentials found in local file emailcredentials.ini
         smtpObj.sendmail('bhontz@gmail.com', strToPerson,
                          msg.as_string())  # this could be a list of addresses to loop over with a pause in between
         smtpObj.close()
@@ -82,68 +81,31 @@ def SimpleEmailMessage(strToPerson, subject, html, text, lstAttachments):
 
     return
 
+
 if __name__ == '__main__':
     print("hello from module %s. Python version: %s" % (sys.argv[0], sys.version))
     sys.stdout.write("--------------------------------------------------------------\n")
     sys.stdout.write("Start of %s Process: %s\n\n" % (sys.argv[0], time.strftime("%H:%M:%S", time.localtime())))
 
-    """
-        first start the game
-    """
-    payload = dict(invite=lstPlayers, startGameAfter=len(lstPlayers))
-    strJSON = "data={}".format(json.dumps(payload))
-    buffer = BytesIO()
-    curl = pycurl.Curl()
-    curl.setopt(pycurl.URL, URL + "createGame")
-    print("strJSON: {}".format(strJSON))
-    curl.setopt(pycurl.POSTFIELDS, strJSON)
-    curl.setopt(pycurl.WRITEDATA, buffer)
-    curl.perform()
-    status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-    if status_code != 200:
-        print("Aww Snap :( Server returned HTTP status code {}".format(status_code))
-    else:
-        response = buffer.getvalue()
-        print("Server Response: {}".format(response.decode('iso-8859-1')))
-
-    curl.close()
-    time.sleep(5)  # wait abit for the server to get settled
-    
-    """
-        now return the player ids to assure the server started the game
-    """
-    curl = pycurl.Curl()
-    buffer = BytesIO()
-    curl.setopt(pycurl.URL, URL + "peakIds")
-    curl.setopt(pycurl.WRITEDATA, buffer)
-    curl.perform()
-    status_code = curl.getinfo(pycurl.RESPONSE_CODE)
-    if status_code != 200:
-        print("Aww Snap :( Server returned HTTP status code {}".format(status_code))
-    else:
-        response = buffer.getvalue()
-        print("Server Response: {}".format(response.decode('iso-8859-1')))
-        lstPlayerIDs = eval(response.decode('iso-8859-1'))
-
-    curl.close()
-    time.sleep(5)  # wait abit for the server to get settled
+    if GameName == "HH:MM:SS":
+        print("You forget to change the GameName variable!!")
+        sys.exit(-1)
 
     """
         now send the email invitations
     """
     sf = SuperFormatter()
     r = dict()
-    strSubject = "Five Crowns Game Invitation - GAME HAS STARTED!"
+    strSubject = "Five Crowns Game - FINAL SCORE REPORT"
 
     for id, player in enumerate(lstPlayers):
-        r["URL"] = URL
-        r["ID"] = lstPlayerIDs[id]
-        fp = open('GameInvitationEmail.html')
+        r["GameName"] = GameName.replace(":", "-")
+        fp = open('GameFinalScore.html')
         html = fp.read()
         fp.close()
         html = sf.format(html, **r)
         SimpleEmailMessage(player, strSubject, html, html, [])
 
     sys.stdout.write("\n\nEnd of %s Process: %s.\n" % (
-    sys.argv[0], time.strftime("%H:%M:%S", time.localtime())))
+        sys.argv[0], time.strftime("%H:%M:%S", time.localtime())))
     sys.stdout.write("-------------------------------------------------------------\n")
