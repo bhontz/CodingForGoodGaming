@@ -347,7 +347,6 @@ class PlayerCheckIn(QDialog):
         nid = s.rfind("=") + 1
         self.gObj.gameURL = s[:n]
 
-        # TODO: n == the offset of the string 'playerReady' within the URL, and is not the playerID
         self.gObj.logger.info("playerURL:{} playerID:{} gameURL:{}".format(s, s[nid:], self.gObj.gameURL))
         print("playerURL:{} playerID:{} gameURL:{}".format(s, s[nid:], self.gObj.gameURL))
         strCheckIn = "{}&name={}".format(s, quote(self.playerName.text()))
